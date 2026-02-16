@@ -5,7 +5,7 @@
   "description": "Bates stamp PDF documents for litigation and discovery. All processing runs on your computer; no data is sent to any server.",
   "permissions": [
     "storage",
-    "contextMenus"
+    "contextMenus","activeTab","tabs"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -22,3 +22,5 @@
     }
   ]
 }
+
+

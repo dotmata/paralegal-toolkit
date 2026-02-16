@@ -176,8 +176,14 @@ async function main(): Promise<void> {
   const source = await loadPdfSource();
   if (!source) {
     showLoading(false, el.loading);
-    setBoot("No PDF loaded. Use popup: Choose PDF, then Open viewer.");
-    showError(true, el.error, el.errorText, "No PDF loaded. Click the extension icon, choose a PDF file, then click Open viewer.");
+    const hadUrl = new URLSearchParams(window.location.search).get("url");
+    if (hadUrl) {
+      setBoot("Could not load PDF from link.");
+      showError(true, el.error, el.errorText, "That site may block loading. Use the extension popup and choose \"Choose PDF file\" to select the PDF from your computer.");
+    } else {
+      setBoot("No PDF loaded. Use popup: Choose PDF, then Open viewer.");
+      showError(true, el.error, el.errorText, "No PDF loaded. Click the extension icon, choose a PDF file, then click Open viewer.");
+    }
     return;
   }
   setBoot("Opening PDF…");

@@ -8,18 +8,21 @@ Bates stamp PDFs directly in your browser. **All processing runs on your compute
    ```bash
    cd extension
    npm install
-   npm run build
+   npm run package
    ```
-2. In Chrome, open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the `extension` folder (the one containing `manifest.json`).
+   `npm run package` runs the build and copies only the files Chrome needs into **`extension/dist/`** (~2–5 MB). The main `extension` folder is 130+ MB because of `node_modules` (used only for building).
+
+2. In Chrome, open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the **`extension/dist`** folder (not the parent `extension` folder).
+
+**Publishing to the Chrome Web Store:** You upload a zip of the **contents of `dist/`** (or the `dist` folder itself). That package is ~2–5 MB. Users who install from the store download only that — not `node_modules` or any of the 130+ MB dev folder.
 
 ## Usage
 
 1. Click the extension icon.
-2. Click **Choose PDF file** and select a PDF.
-3. Click **Open viewer**.
-4. Set prefix, start number, position, font size, and zero-padding. Your last-used settings are saved automatically.
-5. Click **Apply Bates & download** to generate and download the stamped PDF.
-6. Use **Reset to defaults** to clear saved settings. Use **←** / **→** arrow keys to change pages (when not typing in a field).
+2. Click **Choose PDF file** and select a PDF — the viewer opens automatically.
+3. Set prefix, start number, position, font size, and zero-padding. Your last-used settings are saved automatically.
+4. Click **Apply Bates & download** to generate and download the stamped PDF.
+5. Use **Reset to defaults** to clear saved settings. Use **←** / **→** arrow keys to change pages (when not typing in a field).
 
 Optional: right‑click a PDF link and choose **Bates stamp this PDF** to open the viewer (the PDF is fetched in the browser; CORS may block some sites).
 

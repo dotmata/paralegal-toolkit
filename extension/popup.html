@@ -17,14 +17,23 @@
     .btn--secondary:hover:not(:disabled) { background: #e8eaed; }
     .status { margin-top: 12px; font-size: 13px; color: #555; }
     .status--error { color: #c5221f; }
+    .hint { font-size: 12px; color: #666; margin: -4px 0 8px; }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
   <h1>Paralegal Toolkit</h1>
   <p class="desc">Choose a PDF to Bates stamp. All processing is done on your device; nothing is sent to any server.</p>
+  <div id="tab-pdf-section" style="margin-bottom:12px;">
+    <button type="button" id="use-tab-pdf" class="btn btn--primary">Use PDF in this tab</button>
+    <p id="tab-pdf-why" class="hint">Opens when this tab is a web page or PDF.</p>
+    <p id="use-tab-pdf-hint" class="hint hidden">Works for web PDFs only. If it fails, use &quot;Choose PDF file&quot; below.</p>
+  </div>
   <input type="file" id="file-input" accept="application/pdf" class="file-input" aria-label="Choose PDF file" />
   <button type="button" id="choose-btn" class="btn btn--primary">Choose PDF file</button>
   <button type="button" id="open-viewer" class="btn btn--secondary" disabled>Open viewer</button>
+  <p id="local-pdf-hint" class="status hidden">This is a local PDF. Use &quot;Choose PDF file&quot; below and select the same file to Bates stamp it.</p>
+  <p id="tip-no-pdf-tab" class="hint">Tip: To stamp a PDF already open, switch to that tab first, then click the extension.</p>
   <p id="status" class="status" hidden aria-live="polite"></p>
   <script type="module" src="scripts/popup.js"></script>
 </body>
