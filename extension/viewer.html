@@ -6,22 +6,46 @@
   <title>Bates stamp — Paralegal Toolkit</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; background: #e0e0e0; min-height: 100vh; display: flex; flex-direction: column; font-family: system-ui, sans-serif; }
-    #boot-msg { position: fixed; top: 0; left: 0; right: 0; padding: 16px 24px; background: #1a73e8; color: #fff; font-size: 16px; z-index: 10000; }
-    #loading { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 24px 32px; background: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 9999; font-size: 18px; color: #333; }
-    #error { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 24px 32px; background: #fdecea; color: #c00; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 9999; max-width: 90%; text-align: center; }
-    #toolbar { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #fff; border-bottom: 1px solid #ccc; flex-wrap: wrap; }
-    #toolbar button { padding: 6px 12px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
-    #toolbar button:hover { background: #f0f0f0; }
-    #main { flex: 1; display: flex; gap: 16px; padding: 16px; padding-top: 60px; min-height: 400px; background: #d0d0d0; }
-    #viewer-wrap { flex: 1; min-height: 300px; overflow: auto; display: flex; justify-content: center; align-items: flex-start; background: #fff; border-radius: 8px; padding: 16px; }
+    :root {
+      --bg-page: #f5f5f7;
+      --bg-panel: #fff;
+      --border: #e5e5ea;
+      --text: #1d1d1f;
+      --text-muted: #6e6e73;
+      --primary: #0071e3;
+      --primary-hover: #0077ed;
+      --radius: 10px;
+      --space-xs: 4px; --space-sm: 8px; --space-md: 12px; --space-lg: 16px; --space-xl: 24px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-panel: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    body { margin: 0; padding: 0; background: var(--bg-page); min-height: 100vh; display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; font-size: 14px; color: var(--text); -webkit-font-smoothing: antialiased; }
+    #boot-msg { position: fixed; top: 0; left: 0; right: 0; padding: 14px var(--space-xl); background: var(--primary); color: #fff; font-size: 15px; font-weight: 500; z-index: 10000; }
+    #loading { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: var(--space-xl) 40px; background: var(--bg-panel); border-radius: var(--radius); box-shadow: var(--shadow-panel); z-index: 9999; font-size: 16px; color: var(--text); }
+    #error { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: var(--space-xl) 40px; background: #fff5f5; color: #c00; border-radius: var(--radius); box-shadow: var(--shadow-panel); z-index: 9999; max-width: 90%; text-align: center; }
+    #toolbar { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-sm) var(--space-lg); background: var(--bg-panel); border-bottom: 1px solid var(--border); flex-wrap: wrap; min-height: 48px; }
+    #toolbar button { padding: 8px 14px; cursor: pointer; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-panel); font-size: 13px; color: var(--text); transition: background 0.15s, border-color 0.15s; }
+    #toolbar button:hover { background: #f5f5f7; border-color: #d2d2d7; }
+    #main { flex: 1; display: flex; gap: var(--space-lg); padding: var(--space-lg); padding-top: 56px; min-height: 400px; }
+    #viewer-wrap { flex: 1; min-height: 300px; overflow: auto; display: flex; justify-content: center; align-items: flex-start; background: var(--bg-panel); border-radius: var(--radius); padding: var(--space-xl); box-shadow: var(--shadow-sm); }
     #pdf-canvas { display: block; }
-    #bates-controls { width: 260px; flex-shrink: 0; padding: 16px; background: #fff; border-radius: 8px; }
-    #bates-controls h2 { margin: 0 0 12px; font-size: 16px; }
-    #bates-controls label { display: block; margin-bottom: 12px; font-weight: 500; }
-    #bates-controls input, #bates-controls select { display: block; width: 100%; margin-top: 4px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-    #apply-bates { width: 100%; margin-top: 8px; padding: 10px; background: #1a73e8; color: #fff; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; }
-    #apply-bates:hover { background: #1557b0; }
+    #bates-controls { width: 280px; flex-shrink: 0; padding: var(--space-xl); background: var(--bg-panel); border-radius: var(--radius); box-shadow: var(--shadow-panel); border: 1px solid var(--border); }
+    #bates-controls h2 { margin: 0 0 var(--space-lg); font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+    #bates-controls label { display: block; margin-bottom: var(--space-md); font-weight: 500; font-size: 13px; color: var(--text); }
+    .label-hint { font-weight: 400; color: var(--text-muted); font-size: 12px; }
+    #bates-controls input, #bates-controls select { display: block; width: 100%; margin-top: var(--space-xs); padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; color: var(--text); background: var(--bg-panel); transition: border-color 0.15s; }
+    #bates-controls input:focus, #bates-controls select:focus { outline: none; border-color: var(--primary); }
+    #bates-controls input[type="hidden"] { display: none; }
+    .bates-swatches { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-sm); }
+    .bates-swatches button { width: 30px; height: 30px; padding: 0; border: 2px solid transparent; border-radius: 6px; cursor: pointer; box-shadow: 0 0 0 1px rgba(0,0,0,0.12); transition: transform 0.1s, box-shadow 0.15s; }
+    .bates-swatches button:hover { transform: scale(1.05); }
+    .bates-swatches button.selected { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary); }
+    .bates-color-readout { margin: var(--space-sm) 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+    #apply-bates { width: 100%; margin-top: var(--space-sm); padding: 12px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+    #apply-bates:hover { background: var(--primary-hover); }
+    #reset-bates { margin-top: var(--space-sm); width: 100%; padding: 10px; font-size: 13px; color: var(--text-muted); background: transparent; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+    #reset-bates:hover { background: #f5f5f7; color: var(--text); }
+    .bates-footer { margin-top: var(--space-lg); font-size: 12px; color: var(--text-muted); line-height: 1.45; }
     .hidden { display: none !important; }
   </style>
 </head>
@@ -49,7 +73,7 @@
     </div>
     <aside id="bates-controls">
       <h2>Bates stamp</h2>
-      <label>Prefix <input type="text" id="bates-prefix" maxlength="32" value="BATES" /></label>
+      <label>Prefix <input type="text" id="bates-prefix" maxlength="32" placeholder="Optional" /></label>
       <label>Start number <input type="number" id="bates-start" min="0" value="1" /></label>
       <label>Position
         <select id="bates-position">
@@ -63,9 +87,23 @@
       </label>
       <label>Font size <input type="number" id="bates-font-size" min="6" max="24" value="10" /></label>
       <label>Zero-pad <input type="number" id="bates-padding" min="1" max="8" value="4" /></label>
+      <label>Color</label>
+      <input type="hidden" id="bates-color" value="#000000" />
+      <div id="bates-color-swatches" class="bates-swatches" role="group" aria-label="Stamp color"></div>
+      <p id="bates-color-readout" class="bates-color-readout" aria-live="polite">Hex: #000000 &nbsp; RGB: 0, 0, 0</p>
+      <label>Font <span class="label-hint">(court-accepted)</span>
+        <select id="bates-font">
+          <option value="TimesRoman" selected>Times New Roman</option>
+          <option value="TimesRomanBold">Times New Roman Bold</option>
+          <option value="Courier">Courier</option>
+          <option value="CourierBold">Courier Bold</option>
+          <option value="Helvetica">Arial / Helvetica</option>
+          <option value="HelveticaBold">Arial / Helvetica Bold</option>
+        </select>
+      </label>
       <button type="button" id="apply-bates">Apply Bates &amp; download</button>
-      <button type="button" id="reset-bates" style="margin-top:8px;width:100%;padding:6px;font-size:12px;color:#666;background:transparent;border:1px solid #ccc;border-radius:4px;cursor:pointer;">Reset to defaults</button>
-      <p style="margin-top:12px;font-size:12px;color:#666;">Processing is done on your computer. No data is sent to any server.</p>
+      <button type="button" id="reset-bates">Reset to defaults</button>
+      <p class="bates-footer">Processing is done on your computer. No data is sent to any server.</p>
     </aside>
   </main>
   <script type="module" src="scripts/viewer.js"></script>

@@ -10,6 +10,15 @@ export type BatesPosition =
   | "bottom-center"
   | "top-center";
 
+/** pdf-lib StandardFonts key (e.g. Helvetica, TimesRomanBold). */
+export type BatesFontKey =
+  | "Helvetica"
+  | "HelveticaBold"
+  | "TimesRoman"
+  | "TimesRomanBold"
+  | "Courier"
+  | "CourierBold";
+
 export interface BatesOptions {
   prefix: string;
   startNumber: number;
@@ -17,6 +26,10 @@ export interface BatesOptions {
   fontSize: number;
   /** Zero-pad numbers to this many digits (e.g. 4 -> 0001, 0002). */
   padding: number;
+  /** Stamp color as hex (e.g. #000000). */
+  color: string;
+  /** pdf-lib standard font key. */
+  font: BatesFontKey;
 }
 
 export const DEFAULT_BATES_OPTIONS: BatesOptions = {
@@ -25,6 +38,8 @@ export const DEFAULT_BATES_OPTIONS: BatesOptions = {
   position: "bottom-right",
   fontSize: 10,
   padding: 4,
+  color: "#000000",
+  font: "TimesRoman",
 };
 
 export const STORAGE_KEYS = {

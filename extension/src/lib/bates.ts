@@ -3,9 +3,29 @@
  * Non-destructive: returns new bytes; does not mutate input.
  */
 import { PDFDocument, rgb, StandardFonts, type PDFPage } from "pdf-lib";
-import type { BatesOptions } from "../types";
+import type { BatesOptions, BatesFontKey } from "../types";
 
 const MARGIN_PT = 24;
+
+const FONT_MAP: Record<BatesFontKey, (typeof StandardFonts)[keyof typeof StandardFonts]> = {
+  Helvetica: StandardFonts.Helvetica,
+  HelveticaBold: StandardFonts.HelveticaBold,
+  TimesRoman: StandardFonts.TimesRoman,
+  TimesRomanBold: StandardFonts.TimesRomanBold,
+  Courier: StandardFonts.Courier,
+  CourierBold: StandardFonts.CourierBold,
+};
+
+/** Parse hex #RRGGBB to rgb(0–1, 0–1, 0–1). Defaults to black if invalid. */
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex);
+  if (!m) return { r: 0, g: 0, b: 0 };
+  return {
+    r: parseInt(m[1].slice(0, 2), 16) / 255,
+    g: parseInt(m[1].slice(2, 4), 16) / 255,
+    b: parseInt(m[1].slice(4, 6), 16) / 255,
+  };
+}
 
 function formatBatesNumber(num: number, padding: number): string {
   return String(num).padStart(padding, "0");
@@ -50,11 +70,14 @@ export async function applyBatesStamps(
   bytes.set(new Uint8Array(pdfBytes));
   const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
   const pages = doc.getPages();
-  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const fontKey = FONT_MAP[options.font] ?? StandardFonts.Helvetica;
+  const font = await doc.embedFont(fontKey);
+  const stampColor = hexToRgb(options.color);
+  const prefix = (options.prefix != null ? String(options.prefix) : "").trim();
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
-    const label = options.prefix.trim()
-      ? `${options.prefix.trim()}-${formatBatesNumber(options.startNumber + i, options.padding)}`
+    const label = prefix
+      ? `${prefix}-${formatBatesNumber(options.startNumber + i, options.padding)}`
       : formatBatesNumber(options.startNumber + i, options.padding);
     let { x, y } = getStampPosition(page, options.position);
     const size = options.fontSize;
@@ -70,7 +93,7 @@ export async function applyBatesStamps(
       y,
       size,
       font,
-      color: rgb(0, 0, 0),
+      color: rgb(stampColor.r, stampColor.g, stampColor.b),
     });
   }
 

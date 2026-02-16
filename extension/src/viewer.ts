@@ -4,9 +4,29 @@
  */
 import { getPendingPdf, clearPendingPdf } from "./storage.js";
 import { applyBatesStamps } from "./lib/bates.js";
-import type { BatesOptions, BatesPosition } from "./types.js";
+import type { BatesOptions, BatesPosition, BatesFontKey } from "./types.js";
 import { DEFAULT_BATES_OPTIONS, STORAGE_KEYS } from "./types.js";
 import * as pdfjsLib from "pdfjs-dist";
+
+/** Common stamp colors (hex). First is default. */
+const COMMON_BATES_COLORS = [
+  "#000000", "#333333", "#666666", "#999999",
+  "#8B0000", "#B71C1C", "#C5221F", "#1A73E8", "#0D47A1", "#000080",
+] as const;
+
+/** Color names for accessibility (e.g. colorblind users). */
+const COLOR_NAMES: Record<string, string> = {
+  "#000000": "Black",
+  "#333333": "Dark gray",
+  "#666666": "Gray",
+  "#999999": "Light gray",
+  "#8B0000": "Dark red",
+  "#B71C1C": "Red",
+  "#C5221F": "Red",
+  "#1A73E8": "Blue",
+  "#0D47A1": "Dark blue",
+  "#000080": "Navy",
+};
 
 // Local worker from extension (CDN blocked or version mismatch in extensions)
 if (typeof chrome !== "undefined" && chrome.runtime?.getURL) {
@@ -29,6 +49,10 @@ interface ViewerElements {
   position: HTMLSelectElement;
   fontSize: HTMLInputElement;
   padding: HTMLInputElement;
+  color: HTMLInputElement;
+  colorSwatches: HTMLElement;
+  colorReadout: HTMLElement;
+  font: HTMLSelectElement;
   applyBtn: HTMLButtonElement;
   backBtn: HTMLButtonElement;
   loading: HTMLElement;
@@ -59,6 +83,10 @@ function getElements(): ViewerElements {
     position: getEl<HTMLSelectElement>("bates-position"),
     fontSize: getEl<HTMLInputElement>("bates-font-size"),
     padding: getEl<HTMLInputElement>("bates-padding"),
+    color: getEl<HTMLInputElement>("bates-color"),
+    colorSwatches: getEl<HTMLElement>("bates-color-swatches"),
+    colorReadout: getEl<HTMLElement>("bates-color-readout"),
+    font: getEl<HTMLSelectElement>("bates-font"),
     applyBtn: getEl<HTMLButtonElement>("apply-bates"),
     backBtn: getEl<HTMLButtonElement>("back-btn"),
     loading: getEl<HTMLElement>("loading"),
@@ -237,15 +265,59 @@ async function main(): Promise<void> {
   el.position.value = opts.position ?? DEFAULT_BATES_OPTIONS.position;
   el.fontSize.value = String(opts.fontSize ?? DEFAULT_BATES_OPTIONS.fontSize);
   el.padding.value = String(opts.padding ?? DEFAULT_BATES_OPTIONS.padding);
+  const savedColor = opts.color ?? DEFAULT_BATES_OPTIONS.color;
+  const color = COMMON_BATES_COLORS.includes(savedColor as typeof COMMON_BATES_COLORS[number])
+    ? savedColor
+    : DEFAULT_BATES_OPTIONS.color;
+  el.color.value = color;
+  el.font.value = opts.font ?? DEFAULT_BATES_OPTIONS.font;
+
+  /** Update color name, Hex and RGB readout for accessibility (e.g. colorblind users). */
+  function updateColorReadout(hex: string): void {
+    const m = /^#?([0-9a-fA-F]{6})$/.exec(hex);
+    const hexNorm = m ? "#" + m[1].toUpperCase() : "#000000";
+    const r = m ? parseInt(m[1].slice(0, 2), 16) : 0;
+    const g = m ? parseInt(m[1].slice(2, 4), 16) : 0;
+    const b = m ? parseInt(m[1].slice(4, 6), 16) : 0;
+    const name = COLOR_NAMES[hexNorm] ?? "";
+    const namePart = name ? `${name} — ` : "";
+    el.colorReadout.textContent = `${namePart}Hex: ${hexNorm}  RGB: ${r}, ${g}, ${b}`;
+  }
+
+  // Build color swatches
+  function setSwatchSelection(hex: string): void {
+    el.colorSwatches.querySelectorAll("button").forEach((btn) => {
+      btn.classList.toggle("selected", btn.getAttribute("data-color") === hex);
+    });
+  }
+  COMMON_BATES_COLORS.forEach((hex) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.setAttribute("data-color", hex);
+    btn.style.backgroundColor = hex;
+    btn.title = hex;
+    btn.addEventListener("click", () => {
+      el.color.value = hex;
+      setSwatchSelection(hex);
+      updateColorReadout(hex);
+    });
+    el.colorSwatches.appendChild(btn);
+  });
+  setSwatchSelection(el.color.value);
+  updateColorReadout(el.color.value);
 
   el.applyBtn.addEventListener("click", async () => {
     if (!pdfData) return;
+    const color = el.color.value || DEFAULT_BATES_OPTIONS.color;
+    const prefixInput = (el.prefix.value && el.prefix.value.trim()) ? el.prefix.value.trim() : "";
     const options: BatesOptions = {
-      prefix: el.prefix.value.trim() || DEFAULT_BATES_OPTIONS.prefix,
+      prefix: prefixInput,
       startNumber: Math.max(0, parseInt(el.startNumber.value, 10) || 1),
       position: (el.position.value as BatesPosition) || DEFAULT_BATES_OPTIONS.position,
       fontSize: Math.min(24, Math.max(6, parseInt(el.fontSize.value, 10) || 10)),
       padding: Math.min(8, Math.max(1, parseInt(el.padding.value, 10) || 4)),
+      color,
+      font: (el.font.value as BatesFontKey) || DEFAULT_BATES_OPTIONS.font,
     };
     el.applyBtn.disabled = true;
     el.applyBtn.textContent = "Applying…";
@@ -275,6 +347,10 @@ async function main(): Promise<void> {
       el.position.value = DEFAULT_BATES_OPTIONS.position;
       el.fontSize.value = String(DEFAULT_BATES_OPTIONS.fontSize);
       el.padding.value = String(DEFAULT_BATES_OPTIONS.padding);
+      el.color.value = DEFAULT_BATES_OPTIONS.color;
+      setSwatchSelection(DEFAULT_BATES_OPTIONS.color);
+      updateColorReadout(DEFAULT_BATES_OPTIONS.color);
+      el.font.value = DEFAULT_BATES_OPTIONS.font;
     });
   }
 
