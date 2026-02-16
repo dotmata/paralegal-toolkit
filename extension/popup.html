@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bates stamp PDF</title>
+  <style>
+    body { margin: 0; padding: 16px; width: 320px; font-family: system-ui, sans-serif; font-size: 14px; }
+    h1 { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
+    .desc { margin: 0 0 16px; color: #555; line-height: 1.4; }
+    .file-input { position: absolute; width: 0; height: 0; opacity: 0; }
+    .btn { display: block; width: 100%; margin-bottom: 8px; padding: 10px 14px; border: 1px solid #ccc; border-radius: 6px; background: #fff; font-size: 14px; cursor: pointer; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn--primary { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+    .btn--primary:hover:not(:disabled) { background: #1557b0; }
+    .btn--secondary { background: #f1f3f4; }
+    .btn--secondary:hover:not(:disabled) { background: #e8eaed; }
+    .status { margin-top: 12px; font-size: 13px; color: #555; }
+    .status--error { color: #c5221f; }
+  </style>
+</head>
+<body>
+  <h1>Paralegal Toolkit</h1>
+  <p class="desc">Choose a PDF to Bates stamp. All processing is done on your device; nothing is sent to any server.</p>
+  <input type="file" id="file-input" accept="application/pdf" class="file-input" aria-label="Choose PDF file" />
+  <button type="button" id="choose-btn" class="btn btn--primary">Choose PDF file</button>
+  <button type="button" id="open-viewer" class="btn btn--secondary" disabled>Open viewer</button>
+  <p id="status" class="status" hidden aria-live="polite"></p>
+  <script type="module" src="scripts/popup.js"></script>
+</body>
+</html>

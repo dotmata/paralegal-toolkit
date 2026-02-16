@@ -1,0 +1,20 @@
+{
+  "name": "paralegal-toolkit-extension",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:lib && npm run build:ts && npm run build:viewer",
+    "build:lib": "node copy-pdfjs.cjs",
+    "build:ts": "tsc -p tsconfig.json",
+    "build:viewer": "esbuild src/viewer.ts --bundle --format=esm --outfile=scripts/viewer.js --minify --sourcemap"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "esbuild": "^0.24.0",
+    "pdfjs-dist": "^4.0.379",
+    "typescript": "~5.6.0"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  }
+}

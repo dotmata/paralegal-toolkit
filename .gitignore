@@ -137,3 +137,8 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Local reference copy of redaction app (private repo)
+redaction-app/
+redaction-source/
+redactpdf-main/

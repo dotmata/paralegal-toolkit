@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bates stamp — Paralegal Toolkit</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; background: #e0e0e0; min-height: 100vh; display: flex; flex-direction: column; font-family: system-ui, sans-serif; }
+    #boot-msg { position: fixed; top: 0; left: 0; right: 0; padding: 16px 24px; background: #1a73e8; color: #fff; font-size: 16px; z-index: 10000; }
+    #loading { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 24px 32px; background: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 9999; font-size: 18px; color: #333; }
+    #error { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 24px 32px; background: #fdecea; color: #c00; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 9999; max-width: 90%; text-align: center; }
+    #toolbar { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #fff; border-bottom: 1px solid #ccc; flex-wrap: wrap; }
+    #toolbar button { padding: 6px 12px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
+    #toolbar button:hover { background: #f0f0f0; }
+    #main { flex: 1; display: flex; gap: 16px; padding: 16px; padding-top: 60px; min-height: 400px; background: #d0d0d0; }
+    #viewer-wrap { flex: 1; min-height: 300px; overflow: auto; display: flex; justify-content: center; align-items: flex-start; background: #fff; border-radius: 8px; padding: 16px; }
+    #pdf-canvas { display: block; }
+    #bates-controls { width: 260px; flex-shrink: 0; padding: 16px; background: #fff; border-radius: 8px; }
+    #bates-controls h2 { margin: 0 0 12px; font-size: 16px; }
+    #bates-controls label { display: block; margin-bottom: 12px; font-weight: 500; }
+    #bates-controls input, #bates-controls select { display: block; width: 100%; margin-top: 4px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    #apply-bates { width: 100%; margin-top: 8px; padding: 10px; background: #1a73e8; color: #fff; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; }
+    #apply-bates:hover { background: #1557b0; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="boot-msg">Paralegal Toolkit — Loading…</div>
+  <div id="loading" class="hidden">Loading PDF…</div>
+  <div id="error" class="hidden"><p id="error-text"></p></div>
+  <header id="toolbar">
+    <button type="button" id="back-btn">Back</button>
+    <span id="doc-title">PDF</span>
+    <div class="toolbar__nav">
+      <button type="button" id="prev-page" aria-label="Previous page">←</button>
+      <span><span id="page-num">1</span> / <span id="total-pages">0</span></span>
+      <button type="button" id="next-page" aria-label="Next page">→</button>
+    </div>
+    <div class="toolbar__zoom">
+      <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+      <span id="zoom-label">120%</span>
+      <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+    </div>
+  </header>
+  <main id="main">
+    <div id="viewer-wrap">
+      <canvas id="pdf-canvas"></canvas>
+    </div>
+    <aside id="bates-controls">
+      <h2>Bates stamp</h2>
+      <label>Prefix <input type="text" id="bates-prefix" maxlength="32" value="BATES" /></label>
+      <label>Start number <input type="number" id="bates-start" min="0" value="1" /></label>
+      <label>Position
+        <select id="bates-position">
+          <option value="bottom-left">Bottom left</option>
+          <option value="bottom-right" selected>Bottom right</option>
+          <option value="top-left">Top left</option>
+          <option value="top-right">Top right</option>
+          <option value="bottom-center">Bottom center</option>
+          <option value="top-center">Top center</option>
+        </select>
+      </label>
+      <label>Font size <input type="number" id="bates-font-size" min="6" max="24" value="10" /></label>
+      <label>Zero-pad <input type="number" id="bates-padding" min="1" max="8" value="4" /></label>
+      <button type="button" id="apply-bates">Apply Bates &amp; download</button>
+      <button type="button" id="reset-bates" style="margin-top:8px;width:100%;padding:6px;font-size:12px;color:#666;background:transparent;border:1px solid #ccc;border-radius:4px;cursor:pointer;">Reset to defaults</button>
+      <p style="margin-top:12px;font-size:12px;color:#666;">Processing is done on your computer. No data is sent to any server.</p>
+    </aside>
+  </main>
+  <script type="module" src="scripts/viewer.js"></script>
+</body>
+</html>

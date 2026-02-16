@@ -1,0 +1,59 @@
+.popup {
+  width: 320px;
+  padding: 16px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+}
+.popup__title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+.popup__desc {
+  margin: 0 0 16px;
+  color: #555;
+  line-height: 1.4;
+}
+.popup__file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+.popup__btn {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+.popup__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.popup__btn--primary {
+  background: #1a73e8;
+  color: #fff;
+  border-color: #1a73e8;
+}
+.popup__btn--primary:hover:not(:disabled) {
+  background: #1557b0;
+}
+.popup__btn--secondary {
+  background: #f1f3f4;
+}
+.popup__btn--secondary:hover:not(:disabled) {
+  background: #e8eaed;
+}
+.status {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #555;
+}
+.status--error {
+  color: #c5221f;
+}
