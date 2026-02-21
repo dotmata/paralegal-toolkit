@@ -16,7 +16,13 @@ All processing runs on your computer; no PDF data is sent to any server.
    npm install
    npm run build
    ```
-2. In Chrome: open `chrome://extensions` → turn on **Developer mode** → **Load unpacked** → choose the `extension` folder (the one that contains `manifest.json`).
+2. In Chrome: open `chrome://extensions` → turn on **Developer mode** → **Load unpacked** → choose the **`extension`** folder (the one that contains `manifest.json` and `viewer.html`).
+
+**If you use the `extension/dist` folder** (smaller, for store upload): run `npm run package` from the `extension` folder, then load **`extension/dist`** in Chrome.
+
+**Changes not showing?** After editing code you must:
+1. Run **`npm run build`** from the `extension` folder (or `npm run package` if you load from `dist`).
+2. In **chrome://extensions**, click the **Reload** button on your extension. Chrome does not auto-reload unpacked extensions.
 
 ### How to use
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bates stamp — Paralegal Toolkit</title>
+  <title>Paralegal Toolkit - Bates Stamp</title>
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -28,9 +28,27 @@
     #toolbar button:hover { background: #f5f5f7; border-color: #d2d2d7; }
     #main { flex: 1; display: flex; gap: var(--space-lg); padding: var(--space-lg); padding-top: 56px; min-height: 400px; }
     #viewer-wrap { flex: 1; min-height: 300px; overflow: auto; display: flex; justify-content: center; align-items: flex-start; background: var(--bg-panel); border-radius: var(--radius); padding: var(--space-xl); box-shadow: var(--shadow-sm); }
-    #pdf-canvas { display: block; }
+    .viewer-canvas-wrap { position: relative; display: inline-block; border: 1px solid rgba(0,0,0,0.12); box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    #pdf-canvas { display: block; vertical-align: top; }
+    #bates-preview-overlay { position: absolute; left: 0; top: 0; pointer-events: none; }
+    #bates-preview-stamp { position: absolute; white-space: nowrap; }
     #bates-controls { width: 280px; flex-shrink: 0; padding: var(--space-xl); background: var(--bg-panel); border-radius: var(--radius); box-shadow: var(--shadow-panel); border: 1px solid var(--border); }
     #bates-controls h2 { margin: 0 0 var(--space-lg); font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+    .bates-start-outside { display: block; margin-bottom: var(--space-md); }
+    .bates-doctype-outside { display: block; margin-bottom: var(--space-md); }
+    .bates-doc-extra-outside { display: block; margin-bottom: var(--space-md); }
+    .bates-filename-preview { margin: 0 0 var(--space-lg); padding: var(--space-md); background: #f0f4ff; border: 1px solid var(--primary); border-radius: 8px; font-size: 12px; color: var(--text-muted); }
+    .bates-filename-preview output { display: block; margin-top: 4px; font-weight: 600; font-size: 13px; color: var(--text); word-break: break-all; min-height: 1.2em; }
+    .bates-options-details { margin-bottom: var(--space-lg); }
+    .bates-options-details summary { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm) 0; font-size: 15px; font-weight: 600; cursor: pointer; list-style: none; color: var(--text); user-select: none; }
+    .bates-options-details summary::-webkit-details-marker { display: none; }
+    .bates-options-details summary::before { content: ""; display: inline-block; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid var(--text-muted); margin-right: 2px; transition: transform 0.2s; }
+    .bates-options-details[open] summary::before { transform: rotate(90deg); }
+    .bates-options-inner { padding-top: var(--space-sm); padding-left: 2px; }
+    .bates-options-inner #reset-bates { margin-top: var(--space-md); }
+    #bates-controls label.bates-checkbox-label { display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; margin-bottom: var(--space-md); }
+    #bates-controls label.bates-checkbox-label input { width: auto; margin: 0; flex-shrink: 0; }
+    .bates-save-as-hint { margin-top: -4px; margin-bottom: var(--space-md); }
     #bates-controls label { display: block; margin-bottom: var(--space-md); font-weight: 500; font-size: 13px; color: var(--text); }
     .label-hint { font-weight: 400; color: var(--text-muted); font-size: 12px; }
     #bates-controls input, #bates-controls select { display: block; width: 100%; margin-top: var(--space-xs); padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; color: var(--text); background: var(--bg-panel); transition: border-color 0.15s; }
@@ -50,7 +68,7 @@
   </style>
 </head>
 <body>
-  <div id="boot-msg">Paralegal Toolkit — Loading…</div>
+  <div id="boot-msg">Loading…</div>
   <div id="loading" class="hidden">Loading PDF…</div>
   <div id="error" class="hidden"><p id="error-text"></p></div>
   <header id="toolbar">
@@ -69,40 +87,82 @@
   </header>
   <main id="main">
     <div id="viewer-wrap">
-      <canvas id="pdf-canvas"></canvas>
+      <div class="viewer-canvas-wrap">
+        <canvas id="pdf-canvas"></canvas>
+        <div id="bates-preview-overlay">
+          <span id="bates-preview-stamp"></span>
+        </div>
+      </div>
     </div>
     <aside id="bates-controls">
-      <h2>Bates stamp</h2>
-      <label>Prefix <input type="text" id="bates-prefix" maxlength="32" placeholder="Optional" /></label>
-      <label>Start number <input type="number" id="bates-start" min="0" value="1" /></label>
-      <label>Position
-        <select id="bates-position">
-          <option value="bottom-left">Bottom left</option>
-          <option value="bottom-right" selected>Bottom right</option>
-          <option value="top-left">Top left</option>
-          <option value="top-right">Top right</option>
-          <option value="bottom-center">Bottom center</option>
-          <option value="top-center">Top center</option>
+      <h2>Bates Stamp</h2>
+      <label class="bates-start-outside">Start number <input type="number" id="bates-start" min="0" value="1" /></label>
+      <label class="bates-doctype-outside">Document type
+        <select id="bates-doc-type">
+          <option value="" selected>Original File</option>
+          <option value="CAD Printout">CAD Printout</option>
+          <option value="CAD Printout - No Call Notice">CAD Printout - No Call Notice</option>
+          <option value="Booking Photo">Booking Photo</option>
+          <option value="DMV Vehicle Records">DMV Vehicle Records</option>
+          <option value="DMV Driver Records">DMV Driver Records</option>
+          <option value="CII">CII</option>
+          <option value="Other">Other</option>
         </select>
       </label>
-      <label>Font size <input type="number" id="bates-font-size" min="6" max="24" value="10" /></label>
-      <label>Zero-pad <input type="number" id="bates-padding" min="1" max="8" value="4" /></label>
-      <label>Color</label>
-      <input type="hidden" id="bates-color" value="#000000" />
-      <div id="bates-color-swatches" class="bates-swatches" role="group" aria-label="Stamp color"></div>
-      <p id="bates-color-readout" class="bates-color-readout" aria-live="polite">Hex: #000000 &nbsp; RGB: 0, 0, 0</p>
-      <label>Font <span class="label-hint">(court-accepted)</span>
-        <select id="bates-font">
-          <option value="TimesRoman" selected>Times New Roman</option>
-          <option value="TimesRomanBold">Times New Roman Bold</option>
-          <option value="Courier">Courier</option>
-          <option value="CourierBold">Courier Bold</option>
-          <option value="Helvetica">Arial / Helvetica</option>
-          <option value="HelveticaBold">Arial / Helvetica Bold</option>
-        </select>
+      <label class="bates-doc-extra-outside">Add to filename (e.g. name or note) <span class="label-hint">(in parentheses for Original File and certified types, or as filename when Other)</span>
+        <input type="text" id="bates-doc-extra" maxlength="64" placeholder="e.g. Holmes" />
       </label>
+      <p id="bates-filename-preview" class="bates-filename-preview" aria-live="polite">Download as: <output id="bates-filename-preview-value" for="bates-start bates-doc-type bates-doc-extra bates-filename-range bates-prefix">—</output></p>
+      <details class="bates-options-details">
+        <summary>Options</summary>
+        <div class="bates-options-inner">
+          <label>Prefix <input type="text" id="bates-prefix" maxlength="32" value="Bates" placeholder="Optional" /></label>
+          <label class="bates-checkbox-label">
+            <input type="checkbox" id="bates-show-prefix-on-stamp" />
+            Show prefix on stamp
+          </label>
+          <label>Position
+            <select id="bates-position">
+              <option value="bottom-left">Bottom left</option>
+              <option value="bottom-right" selected>Bottom right</option>
+              <option value="top-left">Top left</option>
+              <option value="top-right">Top right</option>
+              <option value="bottom-center">Bottom center</option>
+              <option value="top-center">Top center</option>
+            </select>
+          </label>
+          <label>Font size <input type="number" id="bates-font-size" min="6" max="24" value="12" /></label>
+          <label>Zero-pad <input type="number" id="bates-padding" min="1" max="8" value="6" /></label>
+          <label>Color</label>
+          <input type="hidden" id="bates-color" value="#1A73E8" />
+          <div id="bates-color-swatches" class="bates-swatches" role="group" aria-label="Stamp color"></div>
+          <p id="bates-color-readout" class="bates-color-readout" aria-live="polite">Hex: #000000 &nbsp; RGB: 0, 0, 0</p>
+          <label>Font <span class="label-hint">(court-accepted)</span>
+            <select id="bates-font">
+              <option value="TimesRoman">Times New Roman</option>
+              <option value="TimesRomanBold">Times New Roman Bold</option>
+              <option value="Courier">Courier</option>
+              <option value="CourierBold">Courier Bold</option>
+              <option value="Helvetica" selected>Arial / Helvetica</option>
+              <option value="HelveticaBold">Arial / Helvetica Bold</option>
+            </select>
+          </label>
+          <label>Filename
+            <select id="bates-filename-range">
+              <option value="none">None (e.g. document_bates.pdf)</option>
+              <option value="start" selected>At start (e.g. BATES #1-23 document.pdf)</option>
+              <option value="end">At end (e.g. document BATES #1-23.pdf)</option>
+            </select>
+          </label>
+          <label class="bates-checkbox-label">
+            <input type="checkbox" id="bates-save-as-dialog" checked />
+            Open Save As dialog when downloading
+          </label>
+          <p class="hint bates-save-as-hint">Uncheck to save directly to your default Downloads folder.</p>
+          <button type="button" id="reset-bates">Reset to defaults</button>
+        </div>
+      </details>
       <button type="button" id="apply-bates">Apply Bates &amp; download</button>
-      <button type="button" id="reset-bates">Reset to defaults</button>
       <p class="bates-footer">Processing is done on your computer. No data is sent to any server.</p>
     </aside>
   </main>

@@ -2,13 +2,16 @@
  * Shared types for Paralegal Toolkit extension.
  */
 export const DEFAULT_BATES_OPTIONS = {
-    prefix: "BATES",
+    prefix: "Bates",
     startNumber: 1,
     position: "bottom-right",
-    fontSize: 10,
-    padding: 4,
-    color: "#000000",
-    font: "TimesRoman",
+    fontSize: 12,
+    padding: 6,
+    color: "#1A73E8",
+    font: "Helvetica",
+    filenameRange: "start",
+    saveAsDialog: true,
+    showPrefixOnStamp: false,
 };
 export const STORAGE_KEYS = {
     PENDING_PDF: "bates_pending_pdf",

@@ -14,6 +14,8 @@ Bates stamp PDFs directly in your browser. **All processing runs on your compute
 
 2. In Chrome, open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the **`extension/dist`** folder (not the parent `extension` folder).
 
+**Changes not showing?** After editing code, run **`npm run package`** again (to rebuild and copy into `dist`), then in **chrome://extensions** click **Reload** on your extension. Chrome does not auto-reload unpacked extensions.
+
 **Publishing to the Chrome Web Store:** You upload a zip of the **contents of `dist/`** (or the `dist` folder itself). That package is ~2–5 MB. Users who install from the store download only that — not `node_modules` or any of the 130+ MB dev folder.
 
 ## Usage

@@ -1,15 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "Paralegal Toolkit — Bates Stamping",
+  "name": "Paralegal Toolkit - Bates Stamp",
   "version": "1.0.0",
   "description": "Bates stamp PDF documents for litigation and discovery. All processing runs on your computer; no data is sent to any server.",
   "permissions": [
     "storage",
-    "contextMenus","activeTab","tabs"
+    "contextMenus","activeTab","tabs",
+    "downloads"
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Bates stamp PDF"
+    "default_title": "Paralegal Toolkit - Bates Stamp"
   },
   "background": {
     "service_worker": "scripts/background.js",

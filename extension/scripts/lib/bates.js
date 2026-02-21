@@ -50,23 +50,31 @@ function getStampPosition(page, position) {
  * All processing is done locally on the user's device.
  * @param pdfBytes - Original PDF as ArrayBuffer
  * @param options - Prefix, start number, position, font size, padding
- * @returns New PDF as Uint8Array (stamped)
+ * @returns Stamped PDF bytes and the number of pages stamped (for filename range)
  */
 export async function applyBatesStamps(pdfBytes, options) {
-    // Copy so we don't rely on a possibly detached buffer (e.g. after PDF.js use)
     const bytes = new Uint8Array(pdfBytes.byteLength);
     bytes.set(new Uint8Array(pdfBytes));
     const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
     const pages = doc.getPages();
-    const fontKey = FONT_MAP[options.font] ?? StandardFonts.Helvetica;
+    const pageCount = pages.length;
+    const fontKey = (options.font != null && typeof options.font === "string" && options.font in FONT_MAP)
+        ? FONT_MAP[options.font]
+        : StandardFonts.Helvetica;
     const font = await doc.embedFont(fontKey);
-    const stampColor = hexToRgb(options.color);
-    const prefix = (options.prefix != null ? String(options.prefix) : "").trim();
-    for (let i = 0; i < pages.length; i++) {
+    if (!font) {
+        throw new Error("Failed to load stamp font. Try another font in Options.");
+    }
+    const stampColor = hexToRgb(options.color ?? "#000000");
+    const prefixRaw = (options.prefix != null ? String(options.prefix) : "").trim();
+    const showPrefix = options.showPrefixOnStamp !== false;
+    const prefix = showPrefix ? prefixRaw : "";
+    for (let i = 0; i < pageCount; i++) {
         const page = pages[i];
+        const batesNum = options.startNumber + i;
         const label = prefix
-            ? `${prefix}-${formatBatesNumber(options.startNumber + i, options.padding)}`
-            : formatBatesNumber(options.startNumber + i, options.padding);
+            ? `${prefix}-${formatBatesNumber(batesNum, options.padding)}`
+            : formatBatesNumber(batesNum, options.padding);
         let { x, y } = getStampPosition(page, options.position);
         const size = options.fontSize;
         const textWidth = font.widthOfTextAtSize(label, size);
@@ -86,5 +94,6 @@ export async function applyBatesStamps(pdfBytes, options) {
             color: rgb(stampColor.r, stampColor.g, stampColor.b),
         });
     }
-    return doc.save();
+    const stamped = await doc.save();
+    return { stamped, pageCount };
 }

@@ -4,9 +4,30 @@
  */
 import { getPendingPdf, clearPendingPdf } from "./storage.js";
 import { applyBatesStamps } from "./lib/bates.js";
-import type { BatesOptions, BatesPosition, BatesFontKey } from "./types.js";
+import type { BatesOptions, BatesPosition, BatesFontKey, BatesFilenameRange } from "./types.js";
 import { DEFAULT_BATES_OPTIONS, STORAGE_KEYS } from "./types.js";
 import * as pdfjsLib from "pdfjs-dist";
+
+/** Top bar: no prefix; show only filename + pages when loaded, or status message when loading/error. */
+const TOP_BAR_PREFIX = "";
+
+/** Margin in points for stamp position (must match bates.ts). */
+const STAMP_MARGIN_PT = 24;
+
+/** CSS font family for preview overlay (matches pdf-lib standard fonts). */
+const PREVIEW_FONT_CSS: Record<BatesFontKey, { fontFamily: string; fontWeight: string }> = {
+  Helvetica: { fontFamily: "Arial, Helvetica, sans-serif", fontWeight: "normal" },
+  HelveticaBold: { fontFamily: "Arial, Helvetica, sans-serif", fontWeight: "bold" },
+  TimesRoman: { fontFamily: "Times New Roman, Times, serif", fontWeight: "normal" },
+  TimesRomanBold: { fontFamily: "Times New Roman, Times, serif", fontWeight: "bold" },
+  Courier: { fontFamily: "Courier New, Courier, monospace", fontWeight: "normal" },
+  CourierBold: { fontFamily: "Courier New, Courier, monospace", fontWeight: "bold" },
+};
+
+/** Valid font keys for the stamp (must match bates.ts FONT_MAP). */
+const VALID_BATES_FONTS: BatesFontKey[] = [
+  "Helvetica", "HelveticaBold", "TimesRoman", "TimesRomanBold", "Courier", "CourierBold",
+];
 
 /** Common stamp colors (hex). First is default. */
 const COMMON_BATES_COLORS = [
@@ -28,6 +49,35 @@ const COLOR_NAMES: Record<string, string> = {
   "#000080": "Navy",
 };
 
+/** Format Bates number with zero-pad (same as bates.ts). */
+function formatBatesNumber(num: number, padding: number): string {
+  return String(num).padStart(padding, "0");
+}
+
+/** Stamp position in PDF points (same logic as bates.ts getStampPosition). */
+function getStampPositionPt(
+  pageWidthPt: number,
+  pageHeightPt: number,
+  position: BatesPosition
+): { x: number; y: number } {
+  switch (position) {
+    case "bottom-left":
+      return { x: STAMP_MARGIN_PT, y: STAMP_MARGIN_PT };
+    case "bottom-right":
+      return { x: pageWidthPt - STAMP_MARGIN_PT, y: STAMP_MARGIN_PT };
+    case "top-left":
+      return { x: STAMP_MARGIN_PT, y: pageHeightPt - STAMP_MARGIN_PT };
+    case "top-right":
+      return { x: pageWidthPt - STAMP_MARGIN_PT, y: pageHeightPt - STAMP_MARGIN_PT };
+    case "bottom-center":
+      return { x: pageWidthPt / 2, y: STAMP_MARGIN_PT };
+    case "top-center":
+      return { x: pageWidthPt / 2, y: pageHeightPt - STAMP_MARGIN_PT };
+    default:
+      return { x: pageWidthPt - STAMP_MARGIN_PT, y: STAMP_MARGIN_PT };
+  }
+}
+
 // Local worker from extension (CDN blocked or version mismatch in extensions)
 if (typeof chrome !== "undefined" && chrome.runtime?.getURL) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL("lib/pdf.worker.min.mjs");
@@ -46,6 +96,8 @@ interface ViewerElements {
   zoomLabel: HTMLSpanElement;
   prefix: HTMLInputElement;
   startNumber: HTMLInputElement;
+  docType: HTMLSelectElement;
+  docExtra: HTMLInputElement;
   position: HTMLSelectElement;
   fontSize: HTMLInputElement;
   padding: HTMLInputElement;
@@ -53,6 +105,9 @@ interface ViewerElements {
   colorSwatches: HTMLElement;
   colorReadout: HTMLElement;
   font: HTMLSelectElement;
+  filenameRange: HTMLSelectElement;
+  saveAsDialog: HTMLInputElement;
+  showPrefixOnStamp: HTMLInputElement;
   applyBtn: HTMLButtonElement;
   backBtn: HTMLButtonElement;
   loading: HTMLElement;
@@ -60,6 +115,9 @@ interface ViewerElements {
   errorText: HTMLElement;
   controls: HTMLElement;
   toolbar: HTMLElement;
+  filenamePreviewOutput: HTMLOutputElement;
+  previewOverlay: HTMLElement;
+  previewStamp: HTMLElement;
 }
 
 function getEl<T extends HTMLElement>(id: string): T {
@@ -80,6 +138,8 @@ function getElements(): ViewerElements {
     zoomLabel: getEl<HTMLSpanElement>("zoom-label"),
     prefix: getEl<HTMLInputElement>("bates-prefix"),
     startNumber: getEl<HTMLInputElement>("bates-start"),
+    docType: getEl<HTMLSelectElement>("bates-doc-type"),
+    docExtra: getEl<HTMLInputElement>("bates-doc-extra"),
     position: getEl<HTMLSelectElement>("bates-position"),
     fontSize: getEl<HTMLInputElement>("bates-font-size"),
     padding: getEl<HTMLInputElement>("bates-padding"),
@@ -87,6 +147,9 @@ function getElements(): ViewerElements {
     colorSwatches: getEl<HTMLElement>("bates-color-swatches"),
     colorReadout: getEl<HTMLElement>("bates-color-readout"),
     font: getEl<HTMLSelectElement>("bates-font"),
+    filenameRange: getEl<HTMLSelectElement>("bates-filename-range"),
+    saveAsDialog: getEl<HTMLInputElement>("bates-save-as-dialog"),
+    showPrefixOnStamp: getEl<HTMLInputElement>("bates-show-prefix-on-stamp"),
     applyBtn: getEl<HTMLButtonElement>("apply-bates"),
     backBtn: getEl<HTMLButtonElement>("back-btn"),
     loading: getEl<HTMLElement>("loading"),
@@ -94,6 +157,9 @@ function getElements(): ViewerElements {
     errorText: getEl<HTMLElement>("error-text"),
     controls: getEl<HTMLElement>("bates-controls"),
     toolbar: getEl<HTMLElement>("toolbar"),
+    filenamePreviewOutput: getEl<HTMLOutputElement>("bates-filename-preview-value"),
+    previewOverlay: getEl<HTMLElement>("bates-preview-overlay"),
+    previewStamp: getEl<HTMLElement>("bates-preview-stamp"),
   };
 }
 
@@ -126,7 +192,7 @@ function showError(show: boolean, el: HTMLElement, textEl: HTMLElement, msg?: st
     if (msg) textEl.textContent = msg;
     const boot = document.getElementById("boot-msg");
     if (boot && msg) {
-      boot.textContent = "Paralegal Toolkit — " + msg.slice(0, 60) + (msg.length > 60 ? "…" : "");
+      boot.textContent = TOP_BAR_PREFIX + msg.slice(0, 60) + (msg.length > 60 ? "…" : "");
       boot.style.background = "#c5221f";
     }
   } else {
@@ -134,24 +200,100 @@ function showError(show: boolean, el: HTMLElement, textEl: HTMLElement, msg?: st
   }
 }
 
-function downloadBlob(data: Uint8Array, filename: string): void {
-  const blob = new Blob([data], { type: "application/pdf" });
+/** Build range label for filename, e.g. "BATES #1-23" or "BATES #3". No leading zeroes. */
+function batesRangeLabel(prefix: string, startNumber: number, numPages: number): string {
+  const start = String(startNumber);
+  const end = numPages > 1 ? String(startNumber + numPages - 1) : null;
+  const range = end ? `${start}-${end}` : start;
+  return prefix ? `${prefix} #${range}` : `#${range}`;
+}
+
+/** Build suggested filename from options and current doc type. When "Original File" is selected, uses originalFilename if provided. */
+function suggestedBatesFilename(options: BatesOptions, numPages: number, originalFilename?: string): string {
+  const docTypeEl = document.getElementById("bates-doc-type") as HTMLSelectElement | null;
+  const docTypeTrimmed = (docTypeEl?.value ?? options.documentType ?? "").trim();
+  if (!docTypeTrimmed && originalFilename) {
+    const docExtraEl = document.getElementById("bates-doc-extra") as HTMLInputElement | null;
+    const docExtraTrimmed = (docExtraEl?.value ?? options.documentExtra ?? "").trim();
+    const safeExtra = docExtraTrimmed.replace(/[\\/:*?"<>|]/g, "-") || "";
+    const name = originalFilename.trim();
+    const hasPdf = name.toLowerCase().endsWith(".pdf");
+    const baseWithoutExt = hasPdf ? name.slice(0, -4) : name;
+    const withNote = safeExtra ? `${baseWithoutExt} (${safeExtra}).pdf` : (hasPdf ? name : name + ".pdf");
+    const safeBase = withNote.replace(/[\\/:*?"<>|]/g, "-");
+    if (options.filenameRange === "start" || options.filenameRange === "end") {
+      const label = batesRangeLabel(options.prefix, options.startNumber, numPages);
+      const safeLabel = label.replace(/[\\/:*?"<>|]/g, "-");
+      return `${safeLabel} - ${safeBase}`;
+    }
+    return safeBase || "document_bates.pdf";
+  }
+  const docExtraEl = document.getElementById("bates-doc-extra") as HTMLInputElement | null;
+  const docExtraTrimmed = (docExtraEl?.value ?? options.documentExtra ?? "").trim();
+  const safeDocType = docTypeTrimmed.replace(/[\\/:*?"<>|]/g, "-") || "";
+  const safeExtra = docExtraTrimmed.replace(/[\\/:*?"<>|]/g, "-") || "";
+  const isOther = docTypeTrimmed === "Other";
+  const docLabel = isOther
+    ? safeExtra
+    : safeDocType
+      ? (safeExtra ? `Certified ${safeDocType} (${safeExtra})` : `Certified ${safeDocType}`)
+      : "";
+  const docPart = docLabel ? ` - ${docLabel}` : "";
+
+  if (options.filenameRange === "start" || options.filenameRange === "end") {
+    const label = batesRangeLabel(options.prefix, options.startNumber, numPages);
+    const safeLabel = label.replace(/[\\/:*?"<>|]/g, "-");
+    return `${safeLabel}${docPart}.pdf`;
+  }
+  if (docLabel) return `${docLabel}.pdf`;
+  if (originalFilename && originalFilename.trim()) {
+    const n = originalFilename.trim();
+    return n.toLowerCase().endsWith(".pdf") ? n : n + ".pdf";
+  }
+  return "document_bates.pdf";
+}
+
+/** Save stamped PDF: use Chrome downloads API; saveAs controls whether the Save As dialog is shown. */
+function saveStampedPdf(
+  applyResult: { stamped: Uint8Array; pageCount: number },
+  nameForSaveAs: string,
+  saveAsDialog: boolean
+): void {
+  const name = (nameForSaveAs && nameForSaveAs.trim()) || "document.pdf";
+  const blob = new Blob([applyResult.stamped as unknown as BlobPart], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename.replace(/\.pdf$/i, "_bates.pdf") || "document_bates.pdf";
-  a.click();
-  URL.revokeObjectURL(url);
+  const revoke = () => setTimeout(() => URL.revokeObjectURL(url), 30000);
+  if (typeof chrome?.downloads?.download === "function") {
+    chrome.downloads.download(
+      { url, filename: name, saveAs: saveAsDialog },
+      () => {
+        if (chrome.runtime.lastError) {
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = name;
+          a.click();
+        }
+        revoke();
+      }
+    );
+  } else {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    revoke();
+  }
 }
 
 async function main(): Promise<void> {
   const el = getElements();
   let pdfData: ArrayBuffer | null = null;
-  let filename = "document.pdf";
   let numPages = 0;
   let currentPage = 1;
   let scale = 1.2;
   let rotation = 0;
+  /** Original filename of the loaded PDF (e.g. from Choose file or URL). */
+  let originalFilename = "";
 
   showLoading(true, el.loading);
   showError(false, el.error, el.errorText);
@@ -159,7 +301,7 @@ async function main(): Promise<void> {
   const bootMsg = document.getElementById("boot-msg");
   const setBoot = (text: string) => {
     if (bootMsg) {
-      bootMsg.textContent = "Paralegal Toolkit — " + text;
+      bootMsg.textContent = TOP_BAR_PREFIX + text;
       bootMsg.style.background = "#1a73e8";
       bootMsg.style.display = "block";
     }
@@ -187,17 +329,18 @@ async function main(): Promise<void> {
     return;
   }
   setBoot("Opening PDF…");
-  filename = source.filename;
   await clearPendingPdf();
+  originalFilename = (source.filename && String(source.filename).trim()) || "document.pdf";
   // Keep a copy for Bates; PDF.js may transfer its buffer to the worker (detaching it)
   pdfData = source.data.slice(0) as ArrayBuffer;
   const pdfDataForViewer = source.data.slice(0) as ArrayBuffer;
 
   // Load from bytes (use copy so worker can detach it; we keep pdfData for stamping)
-  let pdfDoc: { numPages: number; getPage: (n: number) => Promise<{ getViewport: (opts: { scale: number; rotation?: number }) => unknown; render: (opts: unknown) => { promise: Promise<void> } }> } | null = null;
+  type PdfDoc = { numPages: number; getPage: (n: number) => Promise<{ getViewport: (opts: { scale: number; rotation?: number }) => unknown; render: (opts: unknown) => { promise: Promise<void> } }> };
+  let pdfDoc: PdfDoc | null = null;
   try {
     const loadingTask = pdfjsLib.getDocument({ data: pdfDataForViewer });
-    pdfDoc = await loadingTask.promise as typeof pdfDoc;
+    pdfDoc = (await loadingTask.promise) as unknown as PdfDoc;
   } catch (e) {
     showLoading(false, el.loading);
     setBoot("Failed to open PDF.");
@@ -213,10 +356,65 @@ async function main(): Promise<void> {
   numPages = pdfDoc.numPages;
   showLoading(false, el.loading);
   if (bootMsg) {
-    bootMsg.textContent = "Paralegal Toolkit — " + filename;
+    bootMsg.textContent = TOP_BAR_PREFIX + originalFilename + (numPages > 0 ? ` (${numPages} ${numPages === 1 ? "page" : "pages"})` : "");
     bootMsg.style.background = "#1a73e8";
   }
   el.totalPages.textContent = String(numPages);
+
+  let lastViewport: { width: number; height: number } | null = null;
+  let lastScale = scale;
+
+  /** Update the Bates stamp preview overlay to match current options and page. */
+  function updateBatesPreview(): void {
+    if (!lastViewport) return;
+    const pos = (el.position.value as BatesPosition) || DEFAULT_BATES_OPTIONS.position;
+    const fontSizePt = Math.min(24, Math.max(6, parseInt(el.fontSize.value, 10) || DEFAULT_BATES_OPTIONS.fontSize));
+    const padding = Math.min(8, Math.max(1, parseInt(el.padding.value, 10) || DEFAULT_BATES_OPTIONS.padding));
+    const startNum = Math.max(0, parseInt(el.startNumber.value, 10) || 1);
+    const prefix = (el.prefix.value && el.prefix.value.trim()) ? el.prefix.value.trim() : "";
+    const fontKey = (el.font?.value as BatesFontKey) || DEFAULT_BATES_OPTIONS.font;
+    const color = el.color.value || DEFAULT_BATES_OPTIONS.color;
+
+    const batesNum = startNum + (currentPage - 1);
+    const showPrefix = el.showPrefixOnStamp.checked;
+    const effectivePrefix = showPrefix ? prefix : "";
+    const label = effectivePrefix
+      ? `${effectivePrefix}-${formatBatesNumber(batesNum, padding)}`
+      : formatBatesNumber(batesNum, padding);
+
+    const pageWidthPt = lastViewport.width / lastScale;
+    const pageHeightPt = lastViewport.height / lastScale;
+    const { x: xPt, y: yPt } = getStampPositionPt(pageWidthPt, pageHeightPt, pos);
+    const marginPx = STAMP_MARGIN_PT * lastScale;
+    const css = PREVIEW_FONT_CSS[fontKey] ?? PREVIEW_FONT_CSS.Helvetica;
+
+    el.previewOverlay.style.width = `${lastViewport.width}px`;
+    el.previewOverlay.style.height = `${lastViewport.height}px`;
+    el.previewStamp.textContent = label;
+    el.previewStamp.style.fontSize = `${fontSizePt * lastScale}px`;
+    el.previewStamp.style.color = color;
+    el.previewStamp.style.fontFamily = css.fontFamily;
+    el.previewStamp.style.fontWeight = css.fontWeight;
+    el.previewStamp.style.transform = "";
+    el.previewStamp.style.left = "";
+    el.previewStamp.style.right = "";
+    el.previewStamp.style.top = "";
+    el.previewStamp.style.bottom = "";
+
+    if (pos.includes("right")) {
+      el.previewStamp.style.right = `${marginPx}px`;
+    } else if (pos.includes("left")) {
+      el.previewStamp.style.left = `${marginPx}px`;
+    } else {
+      el.previewStamp.style.left = "50%";
+      el.previewStamp.style.transform = "translateX(-50%)";
+    }
+    if (pos.includes("bottom")) {
+      el.previewStamp.style.bottom = `${marginPx}px`;
+    } else {
+      el.previewStamp.style.top = `${marginPx}px`;
+    }
+  }
 
   // Same render as redactpdf working-pdf-viewer
   async function renderPage(): Promise<void> {
@@ -236,6 +434,11 @@ async function main(): Promise<void> {
       viewport: viewport,
     };
     await page.render(renderContext).promise;
+    lastViewport = { width: viewport.width, height: viewport.height };
+    lastScale = scale;
+    el.previewOverlay.style.width = `${viewport.width}px`;
+    el.previewOverlay.style.height = `${viewport.height}px`;
+    updateBatesPreview();
     el.pageNum.textContent = String(currentPage);
   }
 
@@ -276,7 +479,48 @@ async function main(): Promise<void> {
     ? savedColor
     : DEFAULT_BATES_OPTIONS.color;
   el.color.value = color;
-  el.font.value = opts.font ?? DEFAULT_BATES_OPTIONS.font;
+  const savedFont = opts.font;
+  el.font.value = savedFont && VALID_BATES_FONTS.includes(savedFont) ? savedFont : DEFAULT_BATES_OPTIONS.font;
+  el.filenameRange.value = opts.filenameRange ?? DEFAULT_BATES_OPTIONS.filenameRange;
+  el.saveAsDialog.checked = opts.saveAsDialog ?? DEFAULT_BATES_OPTIONS.saveAsDialog ?? true;
+  el.showPrefixOnStamp.checked = opts.showPrefixOnStamp ?? DEFAULT_BATES_OPTIONS.showPrefixOnStamp ?? false;
+  if (el.docType && opts.documentType !== undefined && opts.documentType !== "__original__") el.docType.value = opts.documentType;
+  if (el.docExtra && opts.documentExtra !== undefined) el.docExtra.value = opts.documentExtra;
+
+  /** Update the sidebar stub (Download as box). */
+  function updateFilenamePreview(): void {
+    const options: BatesOptions = {
+      prefix: (el.prefix.value && el.prefix.value.trim()) ? el.prefix.value.trim() : "",
+      startNumber: Math.max(0, parseInt(el.startNumber.value, 10) || 1),
+      position: (el.position.value as BatesPosition) || DEFAULT_BATES_OPTIONS.position,
+      fontSize: Math.min(24, Math.max(6, parseInt(el.fontSize.value, 10) || DEFAULT_BATES_OPTIONS.fontSize)),
+      padding: Math.min(8, Math.max(1, parseInt(el.padding.value, 10) || DEFAULT_BATES_OPTIONS.padding)),
+      color: el.color.value || DEFAULT_BATES_OPTIONS.color,
+      font: (el.font?.value as BatesFontKey) || DEFAULT_BATES_OPTIONS.font,
+      filenameRange: (el.filenameRange.value as BatesFilenameRange) || DEFAULT_BATES_OPTIONS.filenameRange,
+      documentType: (el.docType?.value ?? "").trim(),
+      documentExtra: el.docExtra?.value ?? "",
+    };
+    el.filenamePreviewOutput.textContent = suggestedBatesFilename(options, numPages, originalFilename) || "document_bates.pdf";
+  }
+
+  updateFilenamePreview();
+  ["input", "change"].forEach((ev) => {
+    el.startNumber.addEventListener(ev, updateFilenamePreview);
+    el.docType.addEventListener(ev, updateFilenamePreview);
+    el.docExtra.addEventListener(ev, updateFilenamePreview);
+    el.filenameRange.addEventListener(ev, updateFilenamePreview);
+    el.prefix.addEventListener(ev, updateFilenamePreview);
+  });
+  ["input", "change"].forEach((ev) => {
+    el.position.addEventListener(ev, updateBatesPreview);
+    el.fontSize.addEventListener(ev, updateBatesPreview);
+    el.padding.addEventListener(ev, updateBatesPreview);
+    el.startNumber.addEventListener(ev, updateBatesPreview);
+    el.prefix.addEventListener(ev, updateBatesPreview);
+    el.font.addEventListener(ev, updateBatesPreview);
+    el.showPrefixOnStamp.addEventListener(ev, updateBatesPreview);
+  });
 
   /** Update color name, Hex and RGB readout for accessibility (e.g. colorblind users). */
   function updateColorReadout(hex: string): void {
@@ -306,6 +550,7 @@ async function main(): Promise<void> {
       el.color.value = hex;
       setSwatchSelection(hex);
       updateColorReadout(hex);
+      updateBatesPreview();
     });
     el.colorSwatches.appendChild(btn);
   });
@@ -316,21 +561,34 @@ async function main(): Promise<void> {
     if (!pdfData) return;
     const color = el.color.value || DEFAULT_BATES_OPTIONS.color;
     const prefixInput = (el.prefix.value && el.prefix.value.trim()) ? el.prefix.value.trim() : "";
+    const fontValue = (el.font?.value ?? "").trim();
+    const font: BatesFontKey =
+      typeof fontValue === "string" && VALID_BATES_FONTS.includes(fontValue as BatesFontKey)
+        ? (fontValue as BatesFontKey)
+        : DEFAULT_BATES_OPTIONS.font;
+
+    const saveAsDialog = el.saveAsDialog.checked;
     const options: BatesOptions = {
       prefix: prefixInput,
       startNumber: Math.max(0, parseInt(el.startNumber.value, 10) || 1),
       position: (el.position.value as BatesPosition) || DEFAULT_BATES_OPTIONS.position,
-      fontSize: Math.min(24, Math.max(6, parseInt(el.fontSize.value, 10) || 10)),
-      padding: Math.min(8, Math.max(1, parseInt(el.padding.value, 10) || 4)),
+      fontSize: Math.min(24, Math.max(6, parseInt(el.fontSize.value, 10) || DEFAULT_BATES_OPTIONS.fontSize)),
+      padding: Math.min(8, Math.max(1, parseInt(el.padding.value, 10) || DEFAULT_BATES_OPTIONS.padding)),
       color,
-      font: (el.font.value as BatesFontKey) || DEFAULT_BATES_OPTIONS.font,
+      font,
+      filenameRange: (el.filenameRange.value as BatesFilenameRange) || DEFAULT_BATES_OPTIONS.filenameRange,
+      documentType: el.docType?.value ?? "",
+      documentExtra: el.docExtra?.value ?? "",
+      saveAsDialog,
+      showPrefixOnStamp: el.showPrefixOnStamp.checked,
     };
     el.applyBtn.disabled = true;
     el.applyBtn.textContent = "Applying…";
     try {
-      const stamped = await applyBatesStamps(pdfData, options);
+      const applyResult = await applyBatesStamps(pdfData, options);
       chrome.storage.local.set({ [STORAGE_KEYS.BATES_PREFS]: options });
-      downloadBlob(stamped, filename);
+      const nameForSaveAs = suggestedBatesFilename(options, applyResult.pageCount, originalFilename) || "document_bates.pdf";
+      saveStampedPdf(applyResult, nameForSaveAs, saveAsDialog);
       el.applyBtn.textContent = "Download stamped PDF";
     } catch (e) {
       console.error(e);
@@ -357,6 +615,10 @@ async function main(): Promise<void> {
       setSwatchSelection(DEFAULT_BATES_OPTIONS.color);
       updateColorReadout(DEFAULT_BATES_OPTIONS.color);
       el.font.value = DEFAULT_BATES_OPTIONS.font;
+      el.filenameRange.value = DEFAULT_BATES_OPTIONS.filenameRange;
+      el.saveAsDialog.checked = DEFAULT_BATES_OPTIONS.saveAsDialog ?? true;
+      el.showPrefixOnStamp.checked = DEFAULT_BATES_OPTIONS.showPrefixOnStamp ?? false;
+      updateBatesPreview();
     });
   }
 
@@ -380,7 +642,7 @@ main().catch((e) => {
   const msg = e instanceof Error ? `${e.message}\n${e.stack || ""}` : String(e);
   const bootMsg = document.getElementById("boot-msg");
   if (bootMsg) {
-    bootMsg.textContent = "Paralegal Toolkit — Error";
+    bootMsg.textContent = TOP_BAR_PREFIX + "Error";
     bootMsg.style.background = "#c5221f";
     bootMsg.style.display = "block";
   }

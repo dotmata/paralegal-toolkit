@@ -10,6 +10,9 @@ export type BatesPosition =
   | "bottom-center"
   | "top-center";
 
+/** Where to add Bates range in the downloaded filename. */
+export type BatesFilenameRange = "none" | "start" | "end";
+
 /** pdf-lib StandardFonts key (e.g. Helvetica, TimesRomanBold). */
 export type BatesFontKey =
   | "Helvetica"
@@ -30,16 +33,29 @@ export interface BatesOptions {
   color: string;
   /** pdf-lib standard font key. */
   font: BatesFontKey;
+  /** Add Bates range to filename: none, at start (Bates #1-23 name.pdf), or at end (name Bates #1-23.pdf). */
+  filenameRange: BatesFilenameRange;
+  /** SFDA: document type for filename (e.g. CAD Printout). */
+  documentType?: string;
+  /** SFDA: name/note for filename in parentheses when document type ≠ Other. */
+  documentExtra?: string;
+  /** When true, show Save As dialog; when false, download directly to default folder. */
+  saveAsDialog?: boolean;
+  /** When true, stamp shows prefix (e.g. Bates-000001); when false, stamp shows number only (e.g. 000001). */
+  showPrefixOnStamp?: boolean;
 }
 
 export const DEFAULT_BATES_OPTIONS: BatesOptions = {
-  prefix: "BATES",
+  prefix: "Bates",
   startNumber: 1,
   position: "bottom-right",
-  fontSize: 10,
-  padding: 4,
-  color: "#000000",
-  font: "TimesRoman",
+  fontSize: 12,
+  padding: 6,
+  color: "#1A73E8",
+  font: "Helvetica",
+  filenameRange: "start",
+  saveAsDialog: true,
+  showPrefixOnStamp: false,
 };
 
 export const STORAGE_KEYS = {
