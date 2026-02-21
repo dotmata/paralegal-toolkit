@@ -5,7 +5,7 @@
 import { getPendingPdf, clearPendingPdf } from "./storage.js";
 import { applyBatesStamps } from "./lib/bates.js";
 import type { BatesOptions, BatesPosition, BatesFontKey, BatesFilenameRange } from "./types.js";
-import { DEFAULT_BATES_OPTIONS, STORAGE_KEYS } from "./types.js";
+import { DEFAULT_BATES_OPTIONS, DEFAULT_DOCUMENT_TYPES, PERMANENT_DOCUMENT_TYPES, STORAGE_KEYS } from "./types.js";
 import * as pdfjsLib from "pdfjs-dist";
 
 /** Top bar: no prefix; show only filename + pages when loaded, or status message when loading/error. */
@@ -118,6 +118,10 @@ interface ViewerElements {
   filenamePreviewOutput: HTMLOutputElement;
   previewOverlay: HTMLElement;
   previewStamp: HTMLElement;
+  docTypesList: HTMLUListElement;
+  docTypeNewInput: HTMLInputElement;
+  docTypeAddBtn: HTMLButtonElement;
+  docTypesResetBtn: HTMLButtonElement;
 }
 
 function getEl<T extends HTMLElement>(id: string): T {
@@ -160,6 +164,10 @@ function getElements(): ViewerElements {
     filenamePreviewOutput: getEl<HTMLOutputElement>("bates-filename-preview-value"),
     previewOverlay: getEl<HTMLElement>("bates-preview-overlay"),
     previewStamp: getEl<HTMLElement>("bates-preview-stamp"),
+    docTypesList: getEl<HTMLUListElement>("bates-doc-types-list"),
+    docTypeNewInput: getEl<HTMLInputElement>("bates-doc-type-new"),
+    docTypeAddBtn: getEl<HTMLButtonElement>("bates-doc-type-add"),
+    docTypesResetBtn: getEl<HTMLButtonElement>("bates-doc-types-reset"),
   };
 }
 
@@ -469,6 +477,89 @@ async function main(): Promise<void> {
   // Load saved Bates preferences
   const prefs = await chrome.storage.local.get(STORAGE_KEYS.BATES_PREFS).then((r) => r[STORAGE_KEYS.BATES_PREFS] as Partial<BatesOptions> | undefined);
   const opts = prefs && typeof prefs === "object" ? prefs : {};
+
+  // Document types list (customizable in Options)
+  const storedTypes = await chrome.storage.local.get(STORAGE_KEYS.DOCUMENT_TYPES).then((r) => r[STORAGE_KEYS.DOCUMENT_TYPES]);
+  let documentTypes: string[] = Array.isArray(storedTypes) && storedTypes.every((x: unknown) => typeof x === "string")
+    ? (storedTypes as string[])
+    : [...DEFAULT_DOCUMENT_TYPES];
+  if (!documentTypes.includes("Other")) documentTypes.push("Other");
+
+  function sortedTypes(types: string[]): string[] {
+    return [...types].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }
+
+  function syncDocTypeDropdown(types: string[]): void {
+    const keepFirst = el.docType.options[0]?.value === "";
+    el.docType.innerHTML = "";
+    const first = document.createElement("option");
+    first.value = "";
+    first.textContent = "Original File";
+    if (keepFirst) first.selected = true;
+    el.docType.appendChild(first);
+    sortedTypes(types).forEach((t) => {
+      const opt = document.createElement("option");
+      opt.value = t;
+      opt.textContent = t;
+      el.docType.appendChild(opt);
+    });
+    const current = el.docType.value;
+    if (current !== "" && !types.includes(current)) el.docType.value = "";
+  }
+
+  function syncDocTypeEditor(types: string[], onDelete: (label: string) => void): void {
+    el.docTypesList.innerHTML = "";
+    sortedTypes(types).forEach((label) => {
+      const li = document.createElement("li");
+      const span = document.createElement("span");
+      span.textContent = label;
+      li.appendChild(span);
+      if (!PERMANENT_DOCUMENT_TYPES.includes(label)) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = "Delete";
+        btn.addEventListener("click", () => onDelete(label));
+        li.appendChild(btn);
+      }
+      el.docTypesList.appendChild(li);
+    });
+  }
+
+  async function saveDocumentTypes(types: string[]): Promise<void> {
+    await chrome.storage.local.set({ [STORAGE_KEYS.DOCUMENT_TYPES]: types });
+    syncDocTypeDropdown(types);
+    syncDocTypeEditor(types, (label) => removeDocType(label));
+  }
+
+  function addDocType(): void {
+    const name = el.docTypeNewInput.value.trim();
+    if (!name) return;
+    if (documentTypes.includes(name)) return;
+    documentTypes.push(name);
+    saveDocumentTypes(documentTypes);
+    el.docTypeNewInput.value = "";
+  }
+
+  function removeDocType(label: string): void {
+    if (PERMANENT_DOCUMENT_TYPES.includes(label)) return;
+    const idx = documentTypes.indexOf(label);
+    if (idx === -1) return;
+    documentTypes.splice(idx, 1);
+    if (el.docType.value === label) {
+      el.docType.value = "";
+      updateFilenamePreview();
+    }
+    saveDocumentTypes(documentTypes);
+  }
+
+  function resetDocTypes(): void {
+    documentTypes = [...DEFAULT_DOCUMENT_TYPES];
+    saveDocumentTypes(documentTypes);
+  }
+
+  syncDocTypeDropdown(documentTypes);
+  syncDocTypeEditor(documentTypes, (label) => removeDocType(label));
+
   el.prefix.value = opts.prefix ?? DEFAULT_BATES_OPTIONS.prefix;
   el.startNumber.value = String(opts.startNumber ?? DEFAULT_BATES_OPTIONS.startNumber);
   el.position.value = opts.position ?? DEFAULT_BATES_OPTIONS.position;
@@ -621,6 +712,15 @@ async function main(): Promise<void> {
       updateBatesPreview();
     });
   }
+
+  el.docTypeAddBtn.addEventListener("click", addDocType);
+  el.docTypeNewInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addDocType();
+    }
+  });
+  el.docTypesResetBtn.addEventListener("click", resetDocTypes);
 
   // Keyboard: arrow keys for prev/next page (when not in an input)
   document.addEventListener("keydown", (e) => {

@@ -58,11 +58,26 @@ export const DEFAULT_BATES_OPTIONS: BatesOptions = {
   showPrefixOnStamp: false,
 };
 
+/** Document types that cannot be deleted (Original File is always first in the dropdown and not in this list). */
+export const PERMANENT_DOCUMENT_TYPES: readonly string[] = ["Other"];
+
+/** Default document type options (customizable by user; "Original File" is always first and not in this list). */
+export const DEFAULT_DOCUMENT_TYPES: string[] = [
+  "CAD Printout",
+  "CAD Printout - No Call Notice",
+  "Booking Photo",
+  "DMV Vehicle Records",
+  "DMV Driver Records",
+  "CII",
+  "Other",
+];
+
 export const STORAGE_KEYS = {
   PENDING_PDF: "bates_pending_pdf",
   PENDING_FILENAME: "bates_pending_filename",
   PENDING_CLEAR_AT: "bates_pending_clear_at",
   BATES_PREFS: "bates_prefs",
+  DOCUMENT_TYPES: "bates_document_types",
 } as const;
 
 /** Temp storage TTL (ms). Viewer clears after this. */
