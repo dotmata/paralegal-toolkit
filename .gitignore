@@ -142,3 +142,6 @@ vite.config.ts.timestamp-*
 redaction-app/
 redaction-source/
 redactpdf-main/
+
+# Build artifacts / zip archives
+*.zip

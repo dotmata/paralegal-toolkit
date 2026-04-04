@@ -35,9 +35,9 @@ export interface BatesOptions {
   font: BatesFontKey;
   /** Add Bates range to filename: none, at start (Bates #1-23 name.pdf), or at end (name Bates #1-23.pdf). */
   filenameRange: BatesFilenameRange;
-  /** SFDA: document type for filename (e.g. CAD Printout). */
+  /** Document type for filename (e.g. Exhibit, Deposition Transcript). */
   documentType?: string;
-  /** SFDA: name/note for filename in parentheses when document type ≠ Other. */
+  /** Name/note for filename in parentheses when document type ≠ Other. */
   documentExtra?: string;
   /** When true, show Save As dialog; when false, download directly to default folder. */
   saveAsDialog?: boolean;
@@ -63,12 +63,13 @@ export const PERMANENT_DOCUMENT_TYPES: readonly string[] = ["Other"];
 
 /** Default document type options (customizable by user; "Original File" is always first and not in this list). */
 export const DEFAULT_DOCUMENT_TYPES: string[] = [
-  "CAD Printout",
-  "CAD Printout - No Call Notice",
-  "Booking Photo",
-  "DMV Vehicle Records",
-  "DMV Driver Records",
-  "CII",
+  "Exhibit",
+  "Deposition Transcript",
+  "Correspondence",
+  "Pleading",
+  "Discovery Response",
+  "Medical Record",
+  "Contract",
   "Other",
 ];
 

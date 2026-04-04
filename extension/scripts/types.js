@@ -17,12 +17,13 @@ export const DEFAULT_BATES_OPTIONS = {
 export const PERMANENT_DOCUMENT_TYPES = ["Other"];
 /** Default document type options (customizable by user; "Original File" is always first and not in this list). */
 export const DEFAULT_DOCUMENT_TYPES = [
-    "CAD Printout",
-    "CAD Printout - No Call Notice",
-    "Booking Photo",
-    "DMV Vehicle Records",
-    "DMV Driver Records",
-    "CII",
+    "Exhibit",
+    "Deposition Transcript",
+    "Correspondence",
+    "Pleading",
+    "Discovery Response",
+    "Medical Record",
+    "Contract",
     "Other",
 ];
 export const STORAGE_KEYS = {
