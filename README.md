@@ -83,6 +83,10 @@ See `bates-stamp/README.md` for more detail and the local-only design.
 
 Bates stamping a PDF shouldn't require an expensive Adobe Acrobat subscription. This is a free, open-source alternative that runs entirely in your browser — no accounts, no subscriptions, no data leaving your machine.
 
+## Support
+
+If this tool saved you time, consider [starring the repo](https://github.com/dotmata/paralegal-toolkit) — it helps others find it.
+
 ## Author
 
 [Lord Fernandez](https://www.linkedin.com/in/lordfernandez)
