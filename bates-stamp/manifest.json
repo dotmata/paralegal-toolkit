@@ -3,7 +3,7 @@
   "name": "Paralegal Toolkit - Bates Stamp",
   "version": "1.0.0",
   "author": "Lord Fernandez",
-  "description": "Bates stamp PDF documents for litigation and legal discovery. Add sequential numbering, customize prefix and position, and save court-ready files. All processing runs locally on your computer—no data is sent to any server.",
+  "description": "Free Bates stamping for PDFs. No Adobe subscription needed. All processing stays on your device.",
   "permissions": [
     "storage",
     "contextMenus",

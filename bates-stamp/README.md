@@ -6,13 +6,13 @@ Bates stamp PDFs directly in your browser. **All processing runs on your compute
 
 1. Install dependencies and build:
    ```bash
-   cd extension
+   cd bates-stamp
    npm install
    npm run package
    ```
-   `npm run package` runs the build and copies only the files Chrome needs into **`extension/dist/`** (~2–5 MB). The main `extension` folder is 130+ MB because of `node_modules` (used only for building).
+   `npm run package` runs the build and copies only the files Chrome needs into **`bates-stamp/dist/`** (~2–5 MB). The main `bates-stamp` folder is 130+ MB because of `node_modules` (used only for building).
 
-2. In Chrome, open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the **`extension/dist`** folder (not the parent `extension` folder).
+2. In Chrome, open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the **`bates-stamp/dist`** folder (not the parent `bates-stamp` folder).
 
 **Changes not showing?** After editing code, run **`npm run package`** again (to rebuild and copy into `dist`), then in **chrome://extensions** click **Reload** on your extension. Chrome does not auto-reload unpacked extensions.
 

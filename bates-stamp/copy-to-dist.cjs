@@ -17,6 +17,7 @@ const toCopy = [
 const dirs = [
   { src: "scripts", dest: "scripts", skip: (n) => n.endsWith(".map") },
   { src: "lib", dest: "lib", skip: () => false },
+  { src: "icons", dest: "icons", skip: () => false },
 ];
 
 if (fs.existsSync(dist)) fs.rmSync(dist, { recursive: true });
@@ -63,5 +64,5 @@ function dirSize(dir) {
 }
 const bytes = dirSize(dist);
 const mb = (bytes / (1024 * 1024)).toFixed(1);
-console.log("\nDist folder: extension/dist/  (~" + mb + " MB)");
+console.log("\nDist folder: bates-stamp/dist/  (~" + mb + " MB)");
 console.log("Load this folder in chrome://extensions → Load unpacked");
