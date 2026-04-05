@@ -37,7 +37,6 @@ fileInput.addEventListener("change", async () => {
     window.close();
   } catch (e) {
     setStatus("Couldn’t load file. Try a smaller PDF.", true);
-    console.error(e);
   }
   fileInput.value = "";
 });

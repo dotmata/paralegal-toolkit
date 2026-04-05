@@ -1,6 +1,6 @@
 /**
- * Viewer: same render pattern as redactpdf.app working-pdf-viewer.
- * In extension we load via getDocument({ data }) and use local worker (blob URL + CDN worker often fail in extension context).
+ * PDF viewer with live Bates stamp preview overlay.
+ * Loads via getDocument({ data }) and uses local worker (blob URL + CDN worker often fail in extension context).
  */
 import { getPendingPdf, clearPendingPdf } from "./storage.js";
 import { applyBatesStamps } from "./lib/bates.js";
@@ -182,7 +182,6 @@ async function loadPdfSource(): Promise<{ data: ArrayBuffer; filename: string } 
       const filename = decodeURIComponent(urlParam.split("/").pop() || "document.pdf").replace(/\?.*$/, "") || "document.pdf";
       return { data, filename };
     } catch (e) {
-      console.warn("Could not load PDF from URL (CORS or network):", e);
       return null;
     }
   }
@@ -424,7 +423,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // Same render as redactpdf working-pdf-viewer
+  // Render current page with PDF.js
   async function renderPage(): Promise<void> {
     if (!pdfDoc || !pdfData) return;
     const page = await pdfDoc.getPage(currentPage);
@@ -682,7 +681,6 @@ async function main(): Promise<void> {
       saveStampedPdf(applyResult, nameForSaveAs, saveAsDialog);
       el.applyBtn.textContent = "Download stamped PDF";
     } catch (e) {
-      console.error(e);
       el.applyBtn.textContent = "Apply Bates & download";
       const errMsg = e instanceof Error ? e.message : String(e);
       showError(true, el.error, el.errorText, "Failed to apply Bates stamps. " + errMsg);
@@ -738,7 +736,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((e) => {
-  console.error(e);
   const msg = e instanceof Error ? `${e.message}\n${e.stack || ""}` : String(e);
   const bootMsg = document.getElementById("boot-msg");
   if (bootMsg) {
