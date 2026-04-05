@@ -145,3 +145,4 @@ redactpdf-main/
 
 # Build artifacts / zip archives
 *.zip
+*.pdf

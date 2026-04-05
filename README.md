@@ -1,8 +1,36 @@
 # Paralegal Toolkit
 
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-green.svg?logo=googlechrome&logoColor=white)
+![Privacy](https://img.shields.io/badge/Local%20Only-Privacy%20First-purple.svg)
+
 Paralegal Toolkit is a browser-based extension designed to streamline common litigation document workflows.
 
 The initial release focuses on **automated Bates stamping** for PDF documents. Future modules will include secure redaction tools and additional document management utilities tailored for paralegals and litigation support professionals.
+
+## Screenshots
+
+**Extension popup** — select a PDF to get started.
+
+![Popup](assets/screenshots/popup.png)
+
+**Viewer with live Bates stamp preview** — set your options and see the stamp placement in real time.
+
+![Viewer](assets/screenshots/viewer.png)
+
+**Document types** — choose from built-in types or add your own.
+
+![Document types](assets/screenshots/document-types.png)
+
+**Stamping options** — prefix, position, font, color, zero-padding, filename format, and custom document types.
+
+![Options](assets/screenshots/options.png)
+
+**Before and after** — original PDF vs. Bates-stamped output.
+
+| Before | After |
+|--------|-------|
+| ![Before](assets/screenshots/before.png) | ![After](assets/screenshots/after.png) |
 
 ## Chrome extension — Bates stamping
 
@@ -51,6 +79,10 @@ See `extension/README.md` for more detail and the local-only design.
 - Audit log generation
 - Chain-of-custody metadata options
 
-## Philosophy
+## Why this exists
 
-Built to reduce repetitive manual work while preserving document integrity and professional standards.
+Bates stamping a PDF shouldn't require an expensive Adobe Acrobat subscription. This is a free, open-source alternative that runs entirely in your browser — no accounts, no subscriptions, no data leaving your machine.
+
+## Author
+
+[Lord Fernandez](https://www.linkedin.com/in/lordfernandez)
