@@ -8,7 +8,7 @@
     "build:ts": "tsc -p tsconfig.json",
     "build:viewer": "esbuild src/viewer.ts --bundle --format=esm --outfile=scripts/viewer.js --minify",
     "package": "npm run build && node copy-to-dist.cjs",
-    "package:zip": "npm run package && powershell -NoProfile -Command \"Compress-Archive -Path dist -DestinationPath bates-numbering-pdf-tool.zip -Force\""
+    "package:zip": "npm run package && powershell -NoProfile -Command \"Compress-Archive -Path dist\\* -DestinationPath bates-numbering-pdf-tool.zip -Force\""
   },
   "devDependencies": {
     "@types/chrome": "^0.0.268",
