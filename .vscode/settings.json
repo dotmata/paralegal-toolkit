@@ -1,0 +1,11 @@
+{
+  "files.exclude": {
+    "redactpdf-main": true
+  },
+  "files.watcherExclude": {
+    "**/redactpdf-main/**": true
+  },
+  "search.exclude": {
+    "**/redactpdf-main/**": true
+  }
+}
