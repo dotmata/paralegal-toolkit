@@ -18,12 +18,12 @@ This runs `npm run build` (TypeScript, viewer bundle, pdfjs copy) then copies on
 npm run package:zip
 ```
 
-This runs `npm run package` then zips `dist/` into **paralegal-toolkit-bates-stamp.zip** in the bates-stamp folder. Copy that zip to the other computers.
+This runs `npm run package` then zips `dist/` into **bates-numbering-pdf-tool.zip** in the bates-stamp folder. Copy that zip to the other computers.
 
 **Option B – Manual zip in PowerShell (from the bates-stamp folder):**
 
 ```powershell
-Compress-Archive -Path dist -DestinationPath paralegal-toolkit-bates-stamp.zip -Force
+Compress-Archive -Path dist -DestinationPath bates-numbering-pdf-tool.zip -Force
 ```
 
 **Option C – Copy the folder**
@@ -32,7 +32,7 @@ Copy the entire **`dist`** folder to each computer (e.g. via USB or cloud drive)
 
 ## 3. Install on each computer
 
-1. Unzip **paralegal-toolkit-bates-stamp.zip** (if you used the zip), or use the copied **dist** folder as-is.
+1. Unzip **bates-numbering-pdf-tool.zip** (if you used the zip), or use the copied **dist** folder as-is.
 2. Open Chrome and go to **chrome://extensions**.
 3. Turn on **Developer mode** (top right).
 4. Click **Load unpacked**.
