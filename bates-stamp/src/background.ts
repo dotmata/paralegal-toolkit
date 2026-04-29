@@ -1,13 +1,13 @@
 /**
- * Background service worker. Optional: add context menu "Bates stamp this PDF"
- * when user is on a PDF. All processing remains on the user's device.
+ * Background service worker. Optional: adds a "Add Bates numbers to this PDF"
+ * context menu item on PDF links. All processing remains on the user's device.
  */
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "bates-stamp-pdf",
-    title: "Bates stamp this PDF",
+    title: "Add Bates numbers to this PDF",
     contexts: ["link"],
-    documentUrlPatterns: ["*://*/*"],
+    documentUrlPatterns: ["https://*/*", "http://*/*"],
   });
 });
 

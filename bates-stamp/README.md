@@ -26,7 +26,7 @@ Bates stamp PDFs directly in your browser. **All processing runs on your compute
 4. Click **Apply Bates & download** to generate and download the stamped PDF.
 5. Use **Reset to defaults** to clear saved settings. Use **←** / **→** arrow keys to change pages (when not typing in a field).
 
-Optional: right‑click a PDF link and choose **Bates stamp this PDF** to open the viewer (the PDF is fetched in the browser; CORS may block some sites).
+Optional: right‑click a PDF link and choose **Add Bates numbers to this PDF** to open the viewer (the PDF is fetched in the browser; CORS may block some sites).
 
 ## Local-only design
 

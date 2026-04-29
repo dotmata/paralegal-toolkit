@@ -35,6 +35,7 @@
     #bates-preview-stamp { position: absolute; white-space: nowrap; }
     #bates-controls { width: 280px; flex-shrink: 0; padding: var(--space-xl); background: var(--bg-panel); border-radius: var(--radius); box-shadow: var(--shadow-panel); border: 1px solid var(--border); }
     #bates-controls h2 { margin: 0 0 var(--space-lg); font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+    .bates-prefix-outside { display: block; margin-bottom: var(--space-md); }
     .bates-start-outside { display: block; margin-bottom: var(--space-md); }
     .bates-doctype-outside { display: block; margin-bottom: var(--space-md); }
     .bates-doc-extra-outside { display: block; margin-bottom: var(--space-md); }
@@ -67,6 +68,10 @@
     .bates-save-as-hint { margin-top: -4px; margin-bottom: var(--space-md); }
     #bates-controls label { display: block; margin-bottom: var(--space-md); font-weight: 500; font-size: 13px; color: var(--text); }
     .label-hint { font-weight: 400; color: var(--text-muted); font-size: 12px; }
+    .bates-doctype-label-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); }
+    .inline-link-btn { background: none; border: none; padding: 0; margin: 0; font: inherit; font-size: 12px; font-weight: 500; color: var(--primary); cursor: pointer; }
+    .inline-link-btn:hover { text-decoration: underline; }
+    .inline-link-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 2px; }
     #bates-controls input, #bates-controls select { display: block; width: 100%; margin-top: var(--space-xs); padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; color: var(--text); background: var(--bg-panel); transition: border-color 0.15s; }
     #bates-controls input:focus, #bates-controls select:focus { outline: none; border-color: var(--primary); }
     #bates-controls input[type="hidden"] { display: none; }
@@ -103,7 +108,7 @@
   </header>
   <main id="main">
     <div id="viewer-wrap">
-      <p class="viewer-preview-note" aria-live="polite">Preview shows where the Bates stamp will appear on the document.</p>
+      <p class="viewer-preview-note" aria-live="polite">Preview shows where the Bates stamp will appear on each page.</p>
       <div class="viewer-canvas-wrap">
         <canvas id="pdf-canvas"></canvas>
         <div id="bates-preview-overlay">
@@ -113,20 +118,26 @@
     </div>
     <aside id="bates-controls">
       <h2>Bates Stamp</h2>
-      <label class="bates-start-outside">Start number <input type="number" id="bates-start" min="0" value="1" /></label>
-      <label class="bates-doctype-outside">Document type
+      <label class="bates-prefix-outside">Prefix <span class="label-hint">(case or party — e.g. SMITH-, ACME-, PLF-)</span>
+        <input type="text" id="bates-prefix" maxlength="32" placeholder="e.g. SMITH-" />
+      </label>
+      <label class="bates-start-outside">Start number <input type="number" id="bates-start" min="0" placeholder="1" /></label>
+      <label class="bates-doctype-outside">
+        <span class="bates-doctype-label-row">
+          <span>Document type</span>
+          <button type="button" id="bates-doc-types-edit" class="inline-link-btn">Edit list</button>
+        </span>
         <select id="bates-doc-type">
           <option value="" selected>Original File</option>
         </select>
       </label>
-      <label class="bates-doc-extra-outside">Add to filename (e.g. name or note) <span class="label-hint">(in parentheses for Original File and certified types, or as filename when Other)</span>
+      <label class="bates-doc-extra-outside">Add to filename (e.g. name or note) <span class="label-hint">(appended in parentheses, or used as the full filename when type is Other)</span>
         <input type="text" id="bates-doc-extra" maxlength="64" placeholder="e.g. case #, name" />
       </label>
       <p id="bates-filename-preview" class="bates-filename-preview" aria-live="polite">Download as: <output id="bates-filename-preview-value" for="bates-start bates-doc-type bates-doc-extra bates-filename-range bates-prefix">—</output></p>
-      <details class="bates-options-details">
+      <details class="bates-options-details" id="bates-options-details">
         <summary>Options</summary>
         <div class="bates-options-inner">
-          <label>Prefix <input type="text" id="bates-prefix" maxlength="32" value="Bates" placeholder="Optional" /></label>
           <label class="bates-checkbox-label">
             <input type="checkbox" id="bates-show-prefix-on-stamp" />
             Show prefix on stamp
@@ -179,6 +190,10 @@
             Open Save As dialog when downloading
           </label>
           <p class="hint bates-save-as-hint">Uncheck to save directly to your default Downloads folder.</p>
+          <label class="bates-checkbox-label">
+            <input type="checkbox" id="bates-copy-filename-to-clipboard" checked />
+            Copy filename to clipboard on download
+          </label>
           <button type="button" id="reset-bates">Reset to defaults</button>
         </div>
       </details>

@@ -33,6 +33,7 @@ fileInput.addEventListener("change", async () => {
         window.close();
     }
     catch (e) {
+        console.error("Failed to load PDF into pending storage:", e);
         setStatus("Couldn’t load file. Try a smaller PDF.", true);
     }
     fileInput.value = "";

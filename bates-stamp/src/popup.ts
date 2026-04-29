@@ -36,6 +36,7 @@ fileInput.addEventListener("change", async () => {
     chrome.tabs.create({ url: chrome.runtime.getURL("viewer.html") });
     window.close();
   } catch (e) {
+    console.error("Failed to load PDF into pending storage:", e);
     setStatus("Couldn’t load file. Try a smaller PDF.", true);
   }
   fileInput.value = "";

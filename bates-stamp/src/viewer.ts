@@ -2,7 +2,7 @@
  * PDF viewer with live Bates stamp preview overlay.
  * Loads via getDocument({ data }) and uses local worker (blob URL + CDN worker often fail in extension context).
  */
-import { getPendingPdf, clearPendingPdf } from "./storage.js";
+import { getPendingPdf } from "./storage.js";
 import { applyBatesStamps } from "./lib/bates.js";
 import type { BatesOptions, BatesPosition, BatesFontKey, BatesFilenameRange } from "./types.js";
 import { DEFAULT_BATES_OPTIONS, DEFAULT_DOCUMENT_TYPES, PERMANENT_DOCUMENT_TYPES, STORAGE_KEYS } from "./types.js";
@@ -78,12 +78,8 @@ function getStampPositionPt(
   }
 }
 
-// Local worker from extension (CDN blocked or version mismatch in extensions)
-if (typeof chrome !== "undefined" && chrome.runtime?.getURL) {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL("lib/pdf.worker.min.mjs");
-} else {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
-}
+// Local worker bundled with the extension (no remote code loading)
+pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL("lib/pdf.worker.min.mjs");
 
 interface ViewerElements {
   canvas: HTMLCanvasElement;
@@ -108,6 +104,7 @@ interface ViewerElements {
   filenameRange: HTMLSelectElement;
   saveAsDialog: HTMLInputElement;
   showPrefixOnStamp: HTMLInputElement;
+  copyFilenameToClipboard: HTMLInputElement;
   applyBtn: HTMLButtonElement;
   backBtn: HTMLButtonElement;
   loading: HTMLElement;
@@ -122,6 +119,8 @@ interface ViewerElements {
   docTypeNewInput: HTMLInputElement;
   docTypeAddBtn: HTMLButtonElement;
   docTypesResetBtn: HTMLButtonElement;
+  docTypesEditLink: HTMLButtonElement;
+  optionsDetails: HTMLDetailsElement;
 }
 
 function getEl<T extends HTMLElement>(id: string): T {
@@ -154,6 +153,7 @@ function getElements(): ViewerElements {
     filenameRange: getEl<HTMLSelectElement>("bates-filename-range"),
     saveAsDialog: getEl<HTMLInputElement>("bates-save-as-dialog"),
     showPrefixOnStamp: getEl<HTMLInputElement>("bates-show-prefix-on-stamp"),
+    copyFilenameToClipboard: getEl<HTMLInputElement>("bates-copy-filename-to-clipboard"),
     applyBtn: getEl<HTMLButtonElement>("apply-bates"),
     backBtn: getEl<HTMLButtonElement>("back-btn"),
     loading: getEl<HTMLElement>("loading"),
@@ -168,6 +168,8 @@ function getElements(): ViewerElements {
     docTypeNewInput: getEl<HTMLInputElement>("bates-doc-type-new"),
     docTypeAddBtn: getEl<HTMLButtonElement>("bates-doc-type-add"),
     docTypesResetBtn: getEl<HTMLButtonElement>("bates-doc-types-reset"),
+    docTypesEditLink: getEl<HTMLButtonElement>("bates-doc-types-edit"),
+    optionsDetails: getEl<HTMLDetailsElement>("bates-options-details"),
   };
 }
 
@@ -243,7 +245,7 @@ function suggestedBatesFilename(options: BatesOptions, numPages: number, origina
   const docLabel = isOther
     ? safeExtra
     : safeDocType
-      ? (safeExtra ? `Certified ${safeDocType} (${safeExtra})` : `Certified ${safeDocType}`)
+      ? (safeExtra ? `${safeDocType} (${safeExtra})` : safeDocType)
       : "";
   const docPart = docLabel ? ` - ${docLabel}` : "";
 
@@ -336,7 +338,6 @@ async function main(): Promise<void> {
     return;
   }
   setBoot("Opening PDF…");
-  await clearPendingPdf();
   originalFilename = (source.filename && String(source.filename).trim()) || "document.pdf";
   // Keep a copy for Bates; PDF.js may transfer its buffer to the worker (detaching it)
   pdfData = source.data.slice(0) as ArrayBuffer;
@@ -559,8 +560,10 @@ async function main(): Promise<void> {
   syncDocTypeDropdown(documentTypes);
   syncDocTypeEditor(documentTypes, (label) => removeDocType(label));
 
+  // Per-document fields (startNumber, documentType, documentExtra) reset to HTML defaults on
+  // each new file. Prefix persists: case prefixes are typically reused across files; clear the
+  // field and apply to wipe it for the next instance.
   el.prefix.value = opts.prefix ?? DEFAULT_BATES_OPTIONS.prefix;
-  el.startNumber.value = String(opts.startNumber ?? DEFAULT_BATES_OPTIONS.startNumber);
   el.position.value = opts.position ?? DEFAULT_BATES_OPTIONS.position;
   el.fontSize.value = String(opts.fontSize ?? DEFAULT_BATES_OPTIONS.fontSize);
   el.padding.value = String(opts.padding ?? DEFAULT_BATES_OPTIONS.padding);
@@ -574,8 +577,7 @@ async function main(): Promise<void> {
   el.filenameRange.value = opts.filenameRange ?? DEFAULT_BATES_OPTIONS.filenameRange;
   el.saveAsDialog.checked = opts.saveAsDialog ?? DEFAULT_BATES_OPTIONS.saveAsDialog ?? true;
   el.showPrefixOnStamp.checked = opts.showPrefixOnStamp ?? DEFAULT_BATES_OPTIONS.showPrefixOnStamp ?? false;
-  if (el.docType && opts.documentType !== undefined && opts.documentType !== "__original__") el.docType.value = opts.documentType;
-  if (el.docExtra && opts.documentExtra !== undefined) el.docExtra.value = opts.documentExtra;
+  el.copyFilenameToClipboard.checked = opts.copyFilenameToClipboard ?? DEFAULT_BATES_OPTIONS.copyFilenameToClipboard ?? true;
 
   /** Update the sidebar stub (Download as box). */
   function updateFilenamePreview(): void {
@@ -671,19 +673,41 @@ async function main(): Promise<void> {
       documentExtra: el.docExtra?.value ?? "",
       saveAsDialog,
       showPrefixOnStamp: el.showPrefixOnStamp.checked,
+      copyFilenameToClipboard: el.copyFilenameToClipboard.checked,
     };
     el.applyBtn.disabled = true;
     el.applyBtn.textContent = "Applying…";
     try {
       const applyResult = await applyBatesStamps(pdfData, options);
-      chrome.storage.local.set({ [STORAGE_KEYS.BATES_PREFS]: options });
+      // Persist Options-panel settings plus prefix (case prefixes are reused across files).
+      // Per-document fields (startNumber, documentType, documentExtra) are intentionally not saved.
+      const persistedPrefs: Partial<BatesOptions> = {
+        prefix: options.prefix,
+        position: options.position,
+        fontSize: options.fontSize,
+        padding: options.padding,
+        color: options.color,
+        font: options.font,
+        filenameRange: options.filenameRange,
+        saveAsDialog: options.saveAsDialog,
+        showPrefixOnStamp: options.showPrefixOnStamp,
+        copyFilenameToClipboard: options.copyFilenameToClipboard,
+      };
+      chrome.storage.local.set({ [STORAGE_KEYS.BATES_PREFS]: persistedPrefs });
       const nameForSaveAs = suggestedBatesFilename(options, applyResult.pageCount, originalFilename) || "document_bates.pdf";
       saveStampedPdf(applyResult, nameForSaveAs, saveAsDialog);
+      if (el.copyFilenameToClipboard.checked) {
+        try {
+          await navigator.clipboard.writeText(nameForSaveAs.replace(/\.pdf$/i, ""));
+        } catch {
+          /* clipboard write may be blocked; non-fatal */
+        }
+      }
       el.applyBtn.textContent = "Download stamped PDF";
     } catch (e) {
       el.applyBtn.textContent = "Apply Bates & download";
       const errMsg = e instanceof Error ? e.message : String(e);
-      showError(true, el.error, el.errorText, "Failed to apply Bates stamps. " + errMsg);
+      showError(true, el.error, el.errorText, "Failed to apply Bates numbers. " + errMsg);
     } finally {
       el.applyBtn.disabled = false;
     }
@@ -696,7 +720,7 @@ async function main(): Promise<void> {
   if (resetBtn) {
     resetBtn.addEventListener("click", () => {
       el.prefix.value = DEFAULT_BATES_OPTIONS.prefix;
-      el.startNumber.value = String(DEFAULT_BATES_OPTIONS.startNumber);
+      el.startNumber.value = "";
       el.position.value = DEFAULT_BATES_OPTIONS.position;
       el.fontSize.value = String(DEFAULT_BATES_OPTIONS.fontSize);
       el.padding.value = String(DEFAULT_BATES_OPTIONS.padding);
@@ -707,6 +731,7 @@ async function main(): Promise<void> {
       el.filenameRange.value = DEFAULT_BATES_OPTIONS.filenameRange;
       el.saveAsDialog.checked = DEFAULT_BATES_OPTIONS.saveAsDialog ?? true;
       el.showPrefixOnStamp.checked = DEFAULT_BATES_OPTIONS.showPrefixOnStamp ?? false;
+      el.copyFilenameToClipboard.checked = DEFAULT_BATES_OPTIONS.copyFilenameToClipboard ?? true;
       updateBatesPreview();
     });
   }
@@ -719,6 +744,14 @@ async function main(): Promise<void> {
     }
   });
   el.docTypesResetBtn.addEventListener("click", resetDocTypes);
+
+  el.docTypesEditLink.addEventListener("click", () => {
+    el.optionsDetails.open = true;
+    requestAnimationFrame(() => {
+      const editor = document.querySelector(".bates-doc-types-editor");
+      if (editor) editor.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  });
 
   // Keyboard: arrow keys for prev/next page (when not in an input)
   document.addEventListener("keydown", (e) => {
@@ -736,7 +769,8 @@ async function main(): Promise<void> {
 }
 
 main().catch((e) => {
-  const msg = e instanceof Error ? `${e.message}\n${e.stack || ""}` : String(e);
+  console.error("Viewer fatal error:", e);
+  const msg = e instanceof Error ? e.message : String(e);
   const bootMsg = document.getElementById("boot-msg");
   if (bootMsg) {
     bootMsg.textContent = TOP_BAR_PREFIX + "Error";
@@ -748,6 +782,19 @@ main().catch((e) => {
     showLoading(false, el.loading);
     showError(true, el.error, el.errorText, "Something went wrong. " + String(msg).slice(0, 200));
   } catch {
-    document.body.innerHTML = "<div style='padding:24px;padding-top:60px;font-family:system-ui;'><p style='color:#c00;'><strong>Error</strong></p><pre style='white-space:pre-wrap;'>" + String(msg).replace(/</g, "&lt;").slice(0, 2000) + "</pre></div>";
+    document.body.textContent = "";
+    const div = document.createElement("div");
+    div.style.cssText = "padding:24px;padding-top:60px;font-family:system-ui;";
+    const p = document.createElement("p");
+    p.style.color = "#c00";
+    const strong = document.createElement("strong");
+    strong.textContent = "Error";
+    p.appendChild(strong);
+    const pre = document.createElement("pre");
+    pre.style.whiteSpace = "pre-wrap";
+    pre.textContent = String(msg).slice(0, 2000);
+    div.appendChild(p);
+    div.appendChild(pre);
+    document.body.appendChild(div);
   }
 });
