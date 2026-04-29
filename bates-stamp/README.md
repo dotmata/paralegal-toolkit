@@ -1,6 +1,6 @@
-# Paralegal Toolkit — Bates Stamping (Chrome Extension)
+# Bates Numbering PDF Tool — Paralegal Toolkit (Chrome Extension)
 
-Bates stamp PDFs directly in your browser. **All processing runs on your computer**; no PDF data is sent to any server.
+Add Bates numbers to PDF files directly in your browser. **All processing runs on your computer**; no PDF data is sent to any server.
 
 ## Build and load
 

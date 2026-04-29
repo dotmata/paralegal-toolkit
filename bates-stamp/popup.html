@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Paralegal Toolkit – Bates Stamp</title>
+  <title>Bates Numbering PDF Tool - Paralegal Toolkit</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -24,11 +24,16 @@
       font-weight: 600;
       letter-spacing: -0.02em;
       color: #1d1d1f;
+      line-height: 1.25;
     }
-    .header__sub {
-      margin: 4px 0 0;
-      font-size: 13px;
+    .header__title-family {
+      display: block;
+      margin-top: 2px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0;
       color: #6e6e73;
+      text-transform: uppercase;
     }
     .main { margin-bottom: 20px; }
     .desc {
@@ -73,11 +78,13 @@
 </head>
 <body>
   <header class="header">
-    <h1 class="header__title">Paralegal Toolkit</h1>
-    <p class="header__sub">Bates Stamp</p>
+    <h1 class="header__title">
+      Bates Numbering PDF Tool
+      <span class="header__title-family">Paralegal Toolkit</span>
+    </h1>
   </header>
   <main class="main">
-    <p class="desc">Select a PDF to add Bates numbers. The viewer opens in a new tab—stamp, set your options, and download. All processing stays on your device.</p>
+    <p class="desc">Add Bates numbers to any PDF. Preview, customize, and download — all in your browser. Nothing is uploaded.</p>
     <input type="file" id="file-input" accept="application/pdf" class="file-input" aria-label="Choose PDF file" />
     <button type="button" id="choose-btn" class="btn btn--primary">Choose PDF file</button>
   </main>
